@@ -30,6 +30,14 @@
 | [`docs/design/members表字段设计.md`](docs/design/members表字段设计.md) | 数据模型新增表：成员实体——key 归属、成员视图身份与按成员统计的锚点 | 定稿（2026-10-01） |
 | [`docs/design/users表字段设计.md`](docs/design/users表字段设计.md) | 数据模型新增表：管理员（单行）——登录体系的身份落点 | 同上 |
 | [`docs/design/sessions表字段设计.md`](docs/design/sessions表字段设计.md) | 数据模型新增表：管理面会话——cookie 令牌的服务端对应物 | 同上 |
+| [`docs/design/交互设计-总览与共性.md`](docs/design/交互设计-总览与共性.md) | 交互设计总纲：访问拓扑、导航、跨页组件、状态与数值呈现约定 | 定稿（2026-10-01） |
+| [`docs/design/交互设计-登录与会话.md`](docs/design/交互设计-登录与会话.md) | 管理面登录页、引导页、改密、成员登录壳 | 同上 |
+| [`docs/design/交互设计-全员总览.md`](docs/design/交互设计-全员总览.md) | 管理面首页：健康带 + 按成员 / key 汇总 | 同上 |
+| [`docs/design/交互设计-key管理.md`](docs/design/交互设计-key管理.md) | 登记（sk-key 唯一界面露面）、启停、归属、死亡显形 | 同上 |
+| [`docs/design/交互设计-支付记录.md`](docs/design/交互设计-支付记录.md) | 订阅/充值同构表单、核对提示 | 同上 |
+| [`docs/design/交互设计-成员管理.md`](docs/design/交互设计-成员管理.md) | 开户、令牌签发/重发（明文仅一次）、停用 | 同上 |
+| [`docs/design/交互设计-审计日志.md`](docs/design/交互设计-审计日志.md) | 管理操作留痕时间线 | 同上 |
+| [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员单页世界——R12 携带形态定案（徽章 + 展开行） | 同上 |
 | [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 计费平台在 NewAPI 中可用的接口参考：鉴权档位、请求与返回结构、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
 
 - 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（我们定的方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）
