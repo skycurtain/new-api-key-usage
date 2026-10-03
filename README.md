@@ -6,8 +6,8 @@
 
 | 项目 | 内容 |
 |------|------|
-| 当前状态 | **新版设计阶段**（`design` 分支，文档中心）——详细设计推进中 |
-| 技术栈 | 服务器形态栈待架构设计评估（双形态交付已裁决，见 [`docs/design/需求清单.md`](docs/design/需求清单.md) R13/R14） |
+| 当前状态 | **实现启动阶段**（`design` 分支 = 文档中心 + 实现主线）——需求 / 数据模型 / 交互 / 技术选型 / API 契约全部定稿，余同步引擎设计（与实现并行），骨架 + 在线文档页动工 |
+| 技术栈 | 全栈 TypeScript（选型定稿见 [`docs/design/技术选型.md`](docs/design/技术选型.md)）：母体 Bun + Hono + Drizzle + PostgreSQL · 前端 Vue 3 + antdv-next |
 
 ## 项目沿革
 
@@ -23,6 +23,7 @@
 | 文档 | 什么时候读 | 状态 |
 |------|-----------|------|
 | [`docs/design/需求清单.md`](docs/design/需求清单.md) | **需求权威索引与裁决档案**——R1–R15 全部定案（含裁撤与延后），R 编号体系为后续设计文档的引用锚点 | 定稿（2026-10-01） |
+| [`docs/design/技术选型.md`](docs/design/技术选型.md) | 母体技术栈裁决（CFW 延后至功能全集实现后，仅零成本 R14 预留）：全栈 TS；Bun + Hono + Drizzle/pg；前端 Vue 3 + antdv-next；分层落地与回退；antdv-next 核验通过（§7.1） | 定稿（2026-10-02） |
 | [`docs/design/api_keys表字段设计.md`](docs/design/api_keys表字段设计.md) | 数据模型第一张表：key 登记、生命周期与成员归属 | 定稿（2026-10-01） |
 | [`docs/design/usage_logs表字段设计.md`](docs/design/usage_logs表字段设计.md) | 数据模型第二张表：日志明细、来源提列、去重与写入策略 | 同上 |
 | [`docs/design/payments表字段设计.md`](docs/design/payments表字段设计.md) | 数据模型第三张表：支付记录（订阅/充值同构，币种无关，只存事实） | 同上 |
@@ -38,6 +39,9 @@
 | [`docs/design/交互设计-成员管理.md`](docs/design/交互设计-成员管理.md) | 开户、令牌签发/重发（明文仅一次）、停用 | 同上 |
 | [`docs/design/交互设计-审计日志.md`](docs/design/交互设计-审计日志.md) | 管理操作留痕时间线 | 同上 |
 | [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员单页世界——R12 携带形态定案（徽章 + 展开行） | 同上 |
+| [`docs/design/API契约-公共约定.md`](docs/design/API契约-公共约定.md) | API 契约总纲：路由隔离与鉴权两档、错误信封、时间 / 数值 / 分页 / 命名（8 条拟定约定经审通过）——后两篇的引用锚点 | 定稿（2026-10-02） |
+| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 16 端点：引导与会话三态、引擎状态、总览聚合、key 登记四态、下钻明细、支付、成员（令牌明文仅一次）、审计；5 项裁定（经审通过）+ 4 项遗留（key 详情已裁决：实现期定） | 定稿（2026-10-02） |
+| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：令牌验证与页头、单页聚合（含支付参数卡判定）、日志明细（DTO 与管理面同构）；4 项裁定（经审通过）+ 1 项遗留 | 定稿（2026-10-02） |
 | [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 计费平台在 NewAPI 中可用的接口参考：鉴权档位、请求与返回结构、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
 
 - 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（我们定的方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）
