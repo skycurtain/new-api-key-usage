@@ -13,3 +13,13 @@
 .env
 .env.*
 !.env.example
+
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+.turbo/
+
+# 测试与工具
+coverage/
+*.tsbuildinfo

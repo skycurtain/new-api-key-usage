@@ -1,0 +1,16 @@
+{
+  "name": "new-api-key-usage",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev:server": "bun --hot --env-file=.env apps/server/src/index.ts",
+    "dev:web": "bun --filter @new-api-key-usage/web dev"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}
