@@ -9,6 +9,7 @@
 - **文档状态**：头部表格标「状态」（草案 → 讨论中 → 待审阅 → 定稿(日期) → 已实现）；设计文档定稿后不搬家、只改状态；被取代时删除（git 历史即考古）
 - **部署**：交付物必须保证「一条命令链」可部署；**双形态并行已裁决**——完整前后端（运营方服务器）先行，Cloudflare Workers 抽取版（作者自部署）后续（见 `docs/design/需求清单.md` R13）
 - **不引入版本叙事**：不使用 v1/v2/v3 之类版本编号，不以「MVP」等标签或指称显式描述任何历史阶段；文档内容必须**自立**——不得引用、描述任何当前分支之外、可能被删除的分支内容
+- **本地不入库也不 ignore 的物料**（AI 提交时务必避开）：`api*.json`（上游实测快照）、`session-archive/`（作者主动备份的会话记录，如 `v1-设计-*.md`）——不加入 git、不写 `.gitignore`，靠提交时人工/执行者目视把关；`v1-设计-1.md` 为历史对话原档，允许保留旧术语，不作现行依据
 
 ## 项目速览（速记）
 
@@ -19,4 +20,20 @@
 
 ## 命令
 
-实现骨架尚未搭建，暂无构建 / 测试命令；骨架落地后在此登记（Bun 工具链，选型见 `docs/design/技术选型.md`）。
+Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun` 需在 PowerShell 7（`pwsh`）里跑**——mise shim 由 pwsh profile 激活；Windows PowerShell 5.1 会报 command not found，改用 `pwsh -c "…"` 或绝对路径。
+
+| 命令 | 用途 |
+|------|------|
+| `bun install` | 安装 / 链接 workspace 依赖（在仓库根） |
+| `bun test` | 全部测试（core 契约 + server HTTP + **集成**）；集成需 `DATABASE_URL`（compose 中的 PG），无库时自动跳过 |
+| `bun --env-file=.env scripts/seed-from-samples.ts` | 从根目录 `api*.json` 实测快照灌开发库（幂等）；验收接口口径用 |
+| `bun run typecheck` | 根 tsconfig 类型检查（不含 web `.vue`） |
+| `bun run dev:server` | 开发跑母体后端（hot reload） |
+| `bun run dev:web` | 开发跑前端 Vite |
+| `docker compose up -d` | 起开发用 PostgreSQL |
+| `bun run --filter @new-api-key-usage/db db:generate` | 生成 SQL 迁移（`packages/db/drizzle/`） |
+| `bun run --filter @new-api-key-usage/db db:push` | 推送到本地库（开发期） |
+
+环境变量见 `.env.example`（复制为 `.env` 后填写）。
+
+**默认端口 `18456`**（避开 3000/3001 等本机占用）；`NEWAPI_BASE` 是上游 NewAPI 地址，与本服务端口无关。在线文档：`http://127.0.0.1:18456/api/docs`。
