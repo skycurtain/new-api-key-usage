@@ -1,0 +1,13 @@
+{
+  "name": "@new-api-key-usage/core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@logtape/logtape": "^2.3.11",
+    "zod": "^4.6.5"
+  }
+}
