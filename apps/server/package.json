@@ -1,0 +1,23 @@
+{
+  "name": "@new-api-key-usage/server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "^1.6.3",
+    "@new-api-key-usage/core": "workspace:*",
+    "@new-api-key-usage/db": "workspace:*",
+    "@scalar/hono-api-reference": "^0.12.9",
+    "hono": "^4.13.13",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
