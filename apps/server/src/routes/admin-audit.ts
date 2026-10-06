@@ -43,8 +43,6 @@ export function adminAuditRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const q = c.req.query();
       const page = Math.max(1, Number(q.page ?? 1) || 1);
       const page_size = Math.min(

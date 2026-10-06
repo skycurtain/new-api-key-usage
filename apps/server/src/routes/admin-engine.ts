@@ -31,8 +31,6 @@ export function adminEngineRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       return c.json(engineStatus, 200);
     },
   );

@@ -60,8 +60,6 @@ export function memberViewRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireMemberToken(c, async () => {});
-      if (guard) return guard;
       const row = await c.get("repos").members.findById(c.get("memberId")!);
       if (!row) return jsonError(c, 401, ERR.session_expired());
       return c.json({ id: row.id, name: row.name }, 200);
@@ -90,8 +88,6 @@ export function memberViewRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireMemberToken(c, async () => {});
-      if (guard) return guard;
       const range = parseRange(c.req.query());
       if ("fields" in range) {
         return jsonError(c, 422, ERR.validation_failed(range.fields));
@@ -249,8 +245,6 @@ export function memberViewRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireMemberToken(c, async () => {});
-      if (guard) return guard;
       const q = c.req.query();
       const range = parseRange(q);
       if ("fields" in range) {

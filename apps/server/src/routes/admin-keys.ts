@@ -73,8 +73,6 @@ export function adminKeyRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const q = c.req.query();
       const filter: {
         member_id?: number | "unassigned";
@@ -129,8 +127,6 @@ export function adminKeyRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const body = await c.req.json().catch(() => null);
       const sk_key = typeof body?.sk_key === "string" ? body.sk_key.trim() : "";
       let member_id: number | null = null;
@@ -264,8 +260,6 @@ export function adminKeyRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const id = Number(c.req.param("id"));
       const body = await c.req.json().catch(() => null);
       const repos = c.get("repos");

@@ -216,8 +216,6 @@ export function adminSessionRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       return c.json({ username: c.get("adminUsername") ?? "" }, 200);
     },
   );
@@ -235,8 +233,6 @@ export function adminSessionRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const token = getCookie(c, SESSION_COOKIE);
       if (token) {
         await c.get("repos").sessions.deleteByTokenHash(await hashToken(token));
@@ -267,8 +263,6 @@ export function adminSessionRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const body = await c.req.json().catch(() => null);
       const old_password = String(body?.old_password ?? "");
       const new_password = String(body?.new_password ?? "");

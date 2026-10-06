@@ -103,8 +103,6 @@ export function adminUsageRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const latest = await c.get("repos").qpu.latest();
       if (!latest) {
         return c.json(
@@ -142,8 +140,6 @@ export function adminUsageRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const q = c.req.query();
       const range = parseRange(q);
       if ("fields" in range) {
@@ -299,8 +295,6 @@ export function adminUsageRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const q = c.req.query();
       const range = parseRange(q);
       if ("fields" in range) {

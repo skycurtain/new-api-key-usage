@@ -122,8 +122,6 @@ export function adminPaymentRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const repos = c.get("repos");
       const timeline = resolveQpuTimeline(await repos.qpu.listTimeline());
       const rows = await repos.payments.listAll();
@@ -164,8 +162,6 @@ export function adminPaymentRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const body = (await c.req.json().catch(() => ({}))) as Record<
         string,
         unknown
@@ -221,8 +217,6 @@ export function adminPaymentRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const id = Number(c.req.param("id"));
       const body = (await c.req.json().catch(() => ({}))) as Record<
         string,
@@ -274,8 +268,6 @@ export function adminPaymentRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const id = Number(c.req.param("id"));
       const repos = c.get("repos");
       const before = await repos.payments.findById(id);

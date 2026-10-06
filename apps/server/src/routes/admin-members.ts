@@ -53,8 +53,6 @@ export function adminMemberRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const repos = c.get("repos");
       const rows = await repos.members.listAll();
       const items = [];
@@ -90,8 +88,6 @@ export function adminMemberRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const body = await c.req.json().catch(() => null);
       const name = typeof body?.name === "string" ? body.name.trim() : "";
       const remark = typeof body?.remark === "string" ? body.remark : "";
@@ -160,8 +156,6 @@ export function adminMemberRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const id = Number(c.req.param("id"));
       const body = await c.req.json().catch(() => null);
       const status = body?.status;
@@ -203,8 +197,6 @@ export function adminMemberRoutes() {
       },
     }),
     async (c) => {
-      const guard = await requireAdminSession(c, async () => {});
-      if (guard) return guard;
       const id = Number(c.req.param("id"));
       const repos = c.get("repos");
       const before = await repos.members.findById(id);
