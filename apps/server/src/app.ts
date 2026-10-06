@@ -1,6 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
-import { logger as honoLogger } from "hono/logger";
 import { ERR, appLogger } from "@new-api-key-usage/core";
 import { createRepos, type Db } from "@new-api-key-usage/db";
 import { jsonError, type AppVars } from "./middleware.ts";
@@ -39,7 +38,11 @@ export function createApp(opts: CreateAppOptions) {
   });
   const repos = createRepos(opts.db);
 
-  app.use("*", honoLogger());
+  app.use("*", async (c, next) => {
+    const start = Date.now();
+    await next();
+    appLogger("http").info`${c.req.method} ${c.req.path} → ${c.res.status} · ${Date.now() - start}ms`;
+  });
   app.use("*", async (c, next) => {
     c.set("repos", repos);
     c.set("skKeyEncryptionSecret", opts.skKeyEncryptionSecret);
@@ -61,7 +64,7 @@ export function createApp(opts: CreateAppOptions) {
   });
 
   app.onError((err, c) => {
-    appLogger("server").error`unhandled ${c.req.method} ${c.req.path}: ${err}`;
+    appLogger("server").error`未捕获错误 ${c.req.method} ${c.req.path}：${err}`;
     return jsonError(c, 500, ERR.internal());
   });
 
