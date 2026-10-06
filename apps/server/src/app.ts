@@ -40,8 +40,11 @@ export function createApp(opts: CreateAppOptions) {
 
   app.use("*", async (c, next) => {
     const start = Date.now();
-    await next();
-    appLogger("http").info`${c.req.method} ${c.req.path} → ${c.res.status} · ${Date.now() - start}ms`;
+    try {
+      await next();
+    } finally {
+      appLogger("http").info`${c.req.method} ${c.req.path} → ${c.res.status} · ${Date.now() - start}ms`;
+    }
   });
   app.use("*", async (c, next) => {
     c.set("repos", repos);

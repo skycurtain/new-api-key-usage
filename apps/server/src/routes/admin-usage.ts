@@ -15,7 +15,6 @@ import {
   err401,
   err422,
   logPageSchema,
-  keyItemSchema,
 } from "../api-schemas.ts";
 import { z } from "zod";
 

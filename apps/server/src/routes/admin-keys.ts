@@ -133,10 +133,18 @@ export function adminKeyRoutes() {
       if (guard) return guard;
       const body = await c.req.json().catch(() => null);
       const sk_key = typeof body?.sk_key === "string" ? body.sk_key.trim() : "";
-      const member_id =
-        body?.member_id === undefined || body?.member_id === null
-          ? null
-          : Number(body.member_id);
+      let member_id: number | null = null;
+      if (body?.member_id !== undefined && body?.member_id !== null) {
+        const n = Number(body.member_id);
+        if (!Number.isInteger(n) || n <= 0) {
+          return jsonError(
+            c,
+            422,
+            ERR.validation_failed({ member_id: "成员 id 无效" }),
+          );
+        }
+        member_id = n;
+      }
       if (!sk_key || !sk_key.startsWith("sk-")) {
         return jsonError(
           c,
@@ -276,8 +284,18 @@ export function adminKeyRoutes() {
         }
       }
       if (body && "member_id" in body) {
-        const nextMember =
-          body.member_id == null ? null : Number(body.member_id);
+        let nextMember: number | null = null;
+        if (body.member_id != null) {
+          const n = Number(body.member_id);
+          if (!Number.isInteger(n) || n <= 0) {
+            return jsonError(
+              c,
+              422,
+              ERR.validation_failed({ member_id: "成员 id 无效" }),
+            );
+          }
+          nextMember = n;
+        }
         if (nextMember !== before.member_id) {
           patch.member_id = nextMember;
           actions.push({

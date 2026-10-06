@@ -74,14 +74,18 @@ export function adminSessionRoutes() {
       const initUser = c.get("adminInitUsername");
       const initPass = c.get("adminInitPassword");
       if (initUser && initPass) {
-        const password_hash = await hashPassword(initPass);
-        await repos.users.insert(initUser, password_hash);
-        await repos.audit.insert({
-          operator: null,
-          domain: "account",
-          action: "account.init",
-          summary: "空库 env 静默重建管理员",
-        });
+        try {
+          const password_hash = await hashPassword(initPass);
+          await repos.users.insert(initUser, password_hash);
+          await repos.audit.insert({
+            operator: null,
+            domain: "account",
+            action: "account.init",
+            summary: "空库 env 静默重建管理员",
+          });
+        } catch {
+          // 并发/重复初始化：唯一约束冲突时视为已初始化
+        }
         return c.json({ initialized: true }, 200);
       }
       return c.json({ initialized: false }, 200);
