@@ -119,7 +119,7 @@ async function onUserMenuClick({ key }: MenuInfo) {
         <a-dropdown
           :menu="{ items: userMenuItems }"
           placement="bottomRight"
-          trigger="click"
+          :trigger="['click']"
           @menu-click="onUserMenuClick"
         >
           <a class="admin-layout__account">
