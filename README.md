@@ -6,7 +6,7 @@
 
 | 项目 | 内容 |
 |------|------|
-| 当前状态 | **实现推进中**（`design` 分支 = 文档中心 + 实现主线）——设计文档全部定稿（含同步引擎）；后端全量落地（core / db / server / engine + Scalar 在线文档），同步引擎已人工验收；**前端仅有 antdv-next 能力 spike，真实页面待开工** |
+| 当前状态 | **实现推进中**（`v1` 分支 = 文档中心 + 实现主线）——设计文档全部定稿；后端 + 同步引擎已落地；前端总览与 Key 管理已实现，其余页面进行中 |
 | 技术栈 | 全栈 TypeScript（选型定稿见 [`docs/design/技术选型.md`](docs/design/技术选型.md)）：母体 Bun + Hono + Drizzle + PostgreSQL · 前端 Vue 3 + antdv-next |
 
 ## 项目沿革
