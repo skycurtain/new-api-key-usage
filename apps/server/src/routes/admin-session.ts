@@ -51,6 +51,14 @@ const DUMMY_PASSWORD_HASH =
 export function adminSessionRoutes() {
   const r = new OpenAPIHono<{ Variables: AppVars }>();
 
+  // 只保护需要会话的端点：GET/DELETE /session、PUT /password
+  // POST /session 是登录、setup* 是引导——不能套鉴权
+  r.use("/session", async (c, next) => {
+    if (c.req.method === "POST") return next();
+    return requireAdminSession(c, next);
+  });
+  r.use("/password", requireAdminSession);
+
   r.openapi(
     createRoute({
       method: "get",

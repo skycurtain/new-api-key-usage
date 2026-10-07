@@ -5,11 +5,14 @@ import {
   AccountBookOutlined,
   AuditOutlined,
   DashboardOutlined,
+  DownOutlined,
   KeyOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
   TeamOutlined,
+  UserOutlined,
 } from "@antdv-next/icons";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -20,7 +23,12 @@ const { token } = theme.useToken();
 const route = useRoute();
 const router = useRouter();
 const adminSession = useAdminSessionStore();
-const sessionQuery = useSession();
+// 必须解构：未解构时经 reactive 访问会解包 Ref，再取 .value 会得到 undefined
+const {
+  data: sessionData,
+  isPending: sessionPending,
+  isFetching: sessionFetching,
+} = useSession();
 const logout = useLogout();
 
 const collapsed = ref(false);
@@ -28,7 +36,7 @@ const collapsed = ref(false);
 const brandTitle = "NAKU";
 const brandDescription = "NewAPI 用量统计";
 const username = computed(
-  () => adminSession.username || sessionQuery.data.value?.username || "",
+  () => adminSession.username || sessionData.value?.username || "",
 );
 
 /** 收起时仅剩图标——每项必须带 icon（交互共性侧边栏六项） */
@@ -53,9 +61,21 @@ function onMenuClick({ key }: MenuInfo) {
   void router.push(String(key));
 }
 
-async function onLogout() {
-  await logout.mutateAsync().catch(() => undefined);
-  void router.push({ name: "admin-login" });
+const userMenuItems: MenuItemType[] = [
+  { key: "settings", icon: UserOutlined, label: "账号设置" },
+  { type: "divider", key: "d1" },
+  { key: "logout", icon: LogoutOutlined, label: "退出", danger: true },
+];
+
+async function onUserMenuClick({ key }: MenuInfo) {
+  if (key === "settings") {
+    void router.push({ name: "admin-settings" });
+    return;
+  }
+  if (key === "logout") {
+    await logout.mutateAsync().catch(() => undefined);
+    void router.push({ name: "admin-login" });
+  }
 }
 </script>
 
@@ -96,12 +116,21 @@ async function onLogout() {
     </a-layout-sider>
     <a-layout>
       <a-layout-header class="admin-layout__header">
-        <div class="admin-layout__account">
-          <span class="admin-layout__username">{{ username || "…" }}</span>
-          <a-button size="small" :loading="logout.isPending.value" @click="onLogout">
-            登出
-          </a-button>
-        </div>
+        <a-dropdown
+          :menu="{ items: userMenuItems }"
+          placement="bottomRight"
+          trigger="click"
+          @menu-click="onUserMenuClick"
+        >
+          <a class="admin-layout__account">
+            <UserOutlined class="admin-layout__account-icon" />
+            <span v-if="username" class="admin-layout__username">{{ username }}</span>
+            <span v-else class="admin-layout__username is-muted">
+              {{ sessionPending || sessionFetching ? "…" : "未登录" }}
+            </span>
+            <DownOutlined class="admin-layout__account-caret" />
+          </a>
+        </a-dropdown>
       </a-layout-header>
       <a-layout-content class="admin-layout__content">
         <div
@@ -200,14 +229,41 @@ async function onLogout() {
 }
 
 .admin-layout__account {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
-  line-height: normal;
+  gap: 8px;
+  padding: 0 8px;
+  height: 40px;
+  color: rgba(0, 0, 0, 0.88);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.admin-layout__account:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.admin-layout__account-icon {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.admin-layout__account-caret {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .admin-layout__username {
-  color: rgba(0, 0, 0, 0.65);
+  color: rgba(0, 0, 0, 0.88);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-layout__username.is-muted {
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .admin-layout__content {
