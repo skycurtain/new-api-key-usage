@@ -47,7 +47,10 @@ defineProps<{
 
 .page-header__actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  /* 与标题块上缘对齐时，控件 32px 高与 label 竖向居中 */
+  min-height: 32px;
 }
 </style>

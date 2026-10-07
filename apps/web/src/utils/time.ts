@@ -45,3 +45,23 @@ export function recentDaysRange(days: number): { from: string; to: string } {
   const from = to.subtract(days, "day");
   return { from: from.toISOString(), to: to.toISOString() };
 }
+
+/** 统计口径标注：「2026-09-02 ~ 10-01」（北京时间日） */
+export function formatRangeCaption(fromIso: string, toIso: string): string {
+  if (!fromIso || !toIso) return "—";
+  const from = dayjs(fromIso).tz(DISPLAY_TZ).format("YYYY-MM-DD");
+  const to = dayjs(toIso).tz(DISPLAY_TZ).format("YYYY-MM-DD");
+  return `${from} ~ ${to}`;
+}
+
+/** 「数据截止」到分钟（交互共性 §3.3） */
+export function formatMinute(unixSec: number | null | undefined): string {
+  if (unixSec == null) return "—";
+  return dayjs.unix(unixSec).tz(DISPLAY_TZ).format("YYYY-MM-DD HH:mm");
+}
+
+/** 距今小时数（用于数据截止停滞判定） */
+export function hoursSince(unixSec: number | null | undefined): number | null {
+  if (unixSec == null) return null;
+  return (Date.now() / 1000 - unixSec) / 3600;
+}

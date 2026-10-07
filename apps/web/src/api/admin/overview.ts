@@ -21,6 +21,7 @@ export type AdminOverview = {
     key_id: number;
     token_name: string;
     member_id: number | null;
+    member_name: string | null;
     status: string;
     data_cutoff: UnixSec | null;
     usage: UsageTotals;
