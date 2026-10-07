@@ -27,6 +27,8 @@ export function useAdminOverview(range: () => TimeRange) {
   return useQuery({
     queryKey: () => qk.admin.overview(range()),
     queryFn: () => fetchOverview(range()),
+    // 页面可长时间挂起：定期拉取引擎新写入的数据
+    refetchInterval: 60_000,
   });
 }
 

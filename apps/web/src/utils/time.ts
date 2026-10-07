@@ -39,9 +39,14 @@ export function beijingDayEndToIso(date: string): string {
   return dayjs.tz(date, DISPLAY_TZ).add(1, "day").startOf("day").toISOString();
 }
 
+export type RangeValue = { from: string; to: string };
+
 /** 快捷项：最近 N 天（含今日），返回 [from, to) 的 ISO UTC */
-export function recentDaysRange(days: number): { from: string; to: string } {
-  const to = dayjs().tz(DISPLAY_TZ).add(1, "day").startOf("day");
+export function recentDaysRange(
+  days: number,
+  nowMs: number = Date.now(),
+): { from: string; to: string } {
+  const to = dayjs(nowMs).tz(DISPLAY_TZ).add(1, "day").startOf("day");
   const from = to.subtract(days, "day");
   return { from: from.toISOString(), to: to.toISOString() };
 }

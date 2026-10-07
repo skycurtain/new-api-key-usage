@@ -11,12 +11,17 @@ import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import SourceBar from "@/components/common/source-bar.vue";
 import HealthBand from "@/components/admin/health-band.vue";
+import {
+  useLiveTimeRange,
+  type RangeKind,
+  type RangeValue,
+} from "@/composables/use-live-time-range.ts";
 import { useAdminOverview, useEngine, usePayments } from "@/queries/admin.ts";
-import { recentDaysRange, formatMinute } from "@/utils/time.ts";
+import { formatMinute } from "@/utils/time.ts";
 import { formatInt } from "@/utils/format.ts";
 
 const router = useRouter();
-const range = ref(recentDaysRange(30));
+const { range, setRange } = useLiveTimeRange("recent-30");
 
 const overviewQuery = useAdminOverview(() => range.value);
 const engineQuery = useEngine();
@@ -58,6 +63,10 @@ const totalUsage = computed(() => {
 function memberPercent(quota: number): number {
   const total = totalUsage.value.quota;
   return total > 0 ? Math.round((quota / total) * 1000) / 10 : 0;
+}
+
+function onRangeChange(value: RangeValue, kind: RangeKind) {
+  setRange(value, kind);
 }
 
 function onMemberClick(memberId: number | null) {
@@ -155,7 +164,11 @@ const keyColumns = [
     >
       <template #actions>
         <span class="overview-range-label">时间范围</span>
-        <TimeRangePicker v-model="range" :extra-presets="extraPresets" />
+        <TimeRangePicker
+          :model-value="range"
+          :extra-presets="extraPresets"
+          @change="onRangeChange"
+        />
       </template>
     </PageHeader>
 

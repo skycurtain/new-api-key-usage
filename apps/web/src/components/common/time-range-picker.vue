@@ -2,9 +2,8 @@
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { computed } from "vue";
-import { recentDaysRange } from "@/utils/time.ts";
-
-type RangeValue = { from: string; to: string };
+import { recentDaysRange, type RangeValue } from "@/utils/time.ts";
+import type { RangeKind } from "@/composables/use-live-time-range.ts";
 
 const props = defineProps<{
   modelValue: RangeValue;
@@ -14,6 +13,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: RangeValue): void;
+  /** 相对区间可自动跟日历推进；fixed 为绝对窗口 */
+  (e: "change", value: RangeValue, kind: RangeKind): void;
 }>();
 
 const pickerValue = computed<[Dayjs, Dayjs] | null>(() => {
@@ -43,12 +44,29 @@ function rangeToDayjs(range: RangeValue): [Dayjs, Dayjs] {
   return [dayjs(range.from), dayjs(range.to)];
 }
 
+function detectKind(value: RangeValue): RangeKind {
+  const fromD = dayjs(value.from).format("YYYY-MM-DD");
+  const toD = dayjs(value.to).format("YYYY-MM-DD");
+  for (const days of [7, 30] as const) {
+    const r = recentDaysRange(days);
+    if (
+      dayjs(r.from).format("YYYY-MM-DD") === fromD &&
+      dayjs(r.to).format("YYYY-MM-DD") === toD
+    ) {
+      return days === 7 ? "recent-7" : "recent-30";
+    }
+  }
+  return "fixed";
+}
+
 function onChange(dates: Dayjs[] | null) {
   if (!dates || dates.length !== 2 || !dates[0] || !dates[1]) return;
-  emit("update:modelValue", {
+  const value = {
     from: dates[0].toISOString(),
     to: dates[1].toISOString(),
-  });
+  };
+  emit("update:modelValue", value);
+  emit("change", value, detectKind(value));
 }
 </script>
 
