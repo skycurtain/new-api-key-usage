@@ -3,7 +3,7 @@ import {
   ERR,
   KeyCrypto,
   normalizeExpiresAt,
-  unixToIso,
+  toUnixSec,
   type KeyItem,
 } from "@new-api-key-usage/core";
 import type { ApiKeyRow } from "@new-api-key-usage/db";
@@ -30,14 +30,14 @@ function toKeyItem(row: ApiKeyRow & { member_name?: string | null }): KeyItem {
     status: row.status as "active" | "disabled",
     member_id: row.member_id,
     member_name: row.member_name ?? null,
-    registered_at: unixToIso(row.registered_at)!,
-    log_synced_at: unixToIso(row.log_synced_at),
-    usage_synced_at: unixToIso(row.usage_synced_at),
+    registered_at: toUnixSec(row.registered_at)!,
+    log_synced_at: toUnixSec(row.log_synced_at),
+    usage_synced_at: toUnixSec(row.usage_synced_at),
     total_used: row.total_used,
     total_available: row.total_available,
     total_granted: row.total_granted,
     unlimited_quota: row.unlimited_quota,
-    expires_at: unixToIso(row.expires_at),
+    expires_at: toUnixSec(row.expires_at),
   };
 }
 
@@ -85,8 +85,11 @@ export function adminKeyRoutes() {
       }
       let rows = await c.get("repos").keys.listAll(filter);
       if (q.recent_failed === "true") {
-        const { getEngineStatus } = await import("./admin-engine.ts");
-        const failed = new Set(getEngineStatus().last_round?.failed_api_key_ids ?? []);
+        const snap = await c.get("repos").engine.getSnapshot();
+        const failed = new Set(
+          ((snap?.last_round as { failed_api_key_ids?: number[] } | null)
+            ?.failed_api_key_ids) ?? [],
+        );
         rows = rows.filter((r) => failed.has(r.id));
       }
       return c.json(rows.map(toKeyItem), 200);

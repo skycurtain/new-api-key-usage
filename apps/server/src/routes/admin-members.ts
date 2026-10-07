@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { ERR, generateToken, unixToIso } from "@new-api-key-usage/core";
+import { ERR, generateToken, toUnixSec } from "@new-api-key-usage/core";
 import type { MemberRow } from "@new-api-key-usage/db";
 import {
   jsonError,
@@ -25,8 +25,8 @@ function toMemberItem(row: MemberRow, key_count: number) {
     name: row.name,
     remark: row.remark,
     status: row.status as "active" | "disabled",
-    token_issued_at: unixToIso(row.token_issued_at),
-    created_at: unixToIso(row.created_at)!,
+    token_issued_at: toUnixSec(row.token_issued_at),
+    created_at: toUnixSec(row.created_at)!,
     key_count,
   };
 }

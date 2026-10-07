@@ -23,6 +23,20 @@ export function redactSecrets(message: string): string {
     );
 }
 
+/** 日志时间戳：本地时区、可读（终端运维友好） */
+export function formatLogTime(d: Date = new Date()): string {
+  const pad = (n: number, w = 2) => String(n).padStart(w, "0");
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMin);
+  const off = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    ` ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+    `.${pad(d.getMilliseconds(), 3)}${off}`
+  );
+}
+
 let configured = false;
 
 /**
@@ -37,7 +51,7 @@ export function setupLogging(level: AppLogLevel = "info"): void {
       sinks: {
         console: getConsoleSink({
           formatter: (record) => {
-            const ts = new Date(record.timestamp).toISOString();
+            const ts = formatLogTime(new Date(record.timestamp));
             const cat = record.category.join(".");
             const msg = redactSecrets(String(record.message));
             return `${ts} ${record.level.toUpperCase()} [${cat}] ${msg}`;

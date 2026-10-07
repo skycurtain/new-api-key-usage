@@ -73,6 +73,30 @@ async function requestJson<T>(
   }
 }
 
+export interface TokenLogRow {
+  id?: number;
+  user_id?: number;
+  created_at: number;
+  type: number;
+  content?: string;
+  username?: string;
+  token_name?: string;
+  model_name?: string;
+  quota?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  use_time?: number;
+  is_stream?: boolean;
+  channel?: number;
+  channel_name?: string;
+  token_id?: number;
+  group?: string;
+  ip?: string;
+  request_id?: string;
+  upstream_request_id?: string;
+  other?: string;
+}
+
 export function createUpstreamClient(opts: UpstreamClientOptions) {
   const timeoutMs = opts.timeoutMs ?? 8_000;
 
@@ -85,6 +109,15 @@ export function createUpstreamClient(opts: UpstreamClientOptions) {
         timeoutMs,
       );
       return r;
+    },
+
+    /** 轮询日志：GET /api/log/token（最近最多 1000 条） */
+    async fetchTokenLogs(skKey: string): Promise<UpstreamResult<TokenLogRow[]>> {
+      return requestJson<TokenLogRow[]>(
+        joinUrl(opts.baseUrl, "/api/log/token"),
+        skKey,
+        timeoutMs,
+      );
     },
 
     /** 换算率权威来源：GET /api/status（取 quota_per_unit） */

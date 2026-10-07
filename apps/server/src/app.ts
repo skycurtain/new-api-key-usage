@@ -43,7 +43,9 @@ export function createApp(opts: CreateAppOptions) {
     try {
       await next();
     } finally {
-      appLogger("http").info`${c.req.method} ${c.req.path} → ${c.res.status} · ${Date.now() - start}ms`;
+      appLogger("http").info(
+        `${c.req.method} ${c.req.path} -> ${c.res.status} | ${Date.now() - start}ms`,
+      );
     }
   });
   app.use("*", async (c, next) => {
@@ -67,7 +69,7 @@ export function createApp(opts: CreateAppOptions) {
   });
 
   app.onError((err, c) => {
-    appLogger("server").error`未捕获错误 ${c.req.method} ${c.req.path}：${err}`;
+    appLogger("server").error(`未捕获错误 ${c.req.method} ${c.req.path}：${err}`);
     return jsonError(c, 500, ERR.internal());
   });
 

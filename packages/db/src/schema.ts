@@ -191,6 +191,19 @@ export const auditLogs = pgTable(
   (t) => [index("audit_logs_created_at_idx").on(t.created_at)],
 );
 
+/** 同步引擎状态单行快照（《同步引擎设计》§5） */
+export const engineStatus = pgTable("engine_status", {
+  id: integer("id").primaryKey().default(1),
+  running: boolean("running").notNull().default(false),
+  sync_interval_ms: bigint("sync_interval_ms", { mode: "number" })
+    .notNull()
+    .default(300_000),
+  last_round: jsonb("last_round"),
+  updated_at: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
 export type MemberRow = typeof members.$inferSelect;
 export type ApiKeyRow = typeof apiKeys.$inferSelect;
 export type UsageLogRow = typeof usageLogs.$inferSelect;
@@ -199,3 +212,4 @@ export type QpuHistoryRow = typeof qpuHistory.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type AuditLogRow = typeof auditLogs.$inferSelect;
+export type EngineStatusRow = typeof engineStatus.$inferSelect;

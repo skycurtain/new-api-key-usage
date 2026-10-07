@@ -29,6 +29,7 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 | `bun --env-file=.env scripts/seed-from-samples.ts` | 从根目录 `api*.json` 实测快照灌开发库（幂等）；验收接口口径用 |
 | `bun run typecheck` | 根 tsconfig 类型检查（不含 web `.vue`） |
 | `bun run dev:server` | 开发跑母体后端（hot reload） |
+| `bun run dev:engine` | 开发跑同步引擎（独立进程，读 `SYNC_*` env） |
 | `bun run dev:web` | 开发跑前端 Vite |
 | `docker compose up -d` | 起开发用 PostgreSQL |
 | `bun run --filter @new-api-key-usage/db db:generate` | 生成 SQL 迁移（`packages/db/drizzle/`） |

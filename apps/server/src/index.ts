@@ -17,7 +17,9 @@ const app = createApp({
   adminInitPassword: env.ADMIN_INIT_PASSWORD,
 });
 
-appLogger("server").info`服务已启动，端口 ${env.PORT}（cookie_secure=${env.COOKIE_SECURE}，日志级别=${env.LOG_LEVEL}`;
+appLogger("server").info(
+  `服务已启动，端口 ${env.PORT}（cookie_secure=${env.COOKIE_SECURE}，日志级别=${env.LOG_LEVEL}）`,
+);
 
 export default {
   port: env.PORT,

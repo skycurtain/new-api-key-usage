@@ -4,7 +4,7 @@ import {
   qpuAt,
   quotaToUsdStr,
   resolveQpuTimeline,
-  unixToIso,
+  toUnixSec,
   type PaymentItem,
 } from "@new-api-key-usage/core";
 import type { PaymentRow } from "@new-api-key-usage/db";
@@ -31,11 +31,11 @@ function toPaymentItem(row: PaymentRow, quota_usd: string): PaymentItem {
   return {
     id: row.id,
     kind: row.kind as PaymentItem["kind"],
-    paid_at: unixToIso(row.paid_at)!,
+    paid_at: toUnixSec(row.paid_at)!,
     paid_amount: row.paid_amount,
     remark: row.remark,
-    period_start: unixToIso(row.period_start),
-    period_end: unixToIso(row.period_end),
+    period_start: toUnixSec(row.period_start),
+    period_end: toUnixSec(row.period_end),
     subscription_id: row.subscription_id,
     quota_granted: row.quota_granted,
     quota_usd,

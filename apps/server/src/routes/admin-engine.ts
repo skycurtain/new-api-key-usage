@@ -3,11 +3,22 @@ import type { EngineStatus } from "@new-api-key-usage/core";
 import { requireAdminSession, type AppVars } from "../middleware.ts";
 import { engineStatusSchema, err401 } from "../api-schemas.ts";
 
-/** 状态存储归同步引擎设计；此处只暴露契约字段 */
-let engineStatus: EngineStatus = {
-  running: false,
-  last_round: null,
-};
+export type EngineStatusView = EngineStatus & { sync_interval_ms: number };
+
+export function toEngineStatusView(row: {
+  running: boolean;
+  sync_interval_ms: number;
+  last_round: unknown;
+} | null): EngineStatusView {
+  if (!row) {
+    return { running: false, sync_interval_ms: 300_000, last_round: null };
+  }
+  return {
+    running: row.running,
+    sync_interval_ms: row.sync_interval_ms,
+    last_round: (row.last_round as EngineStatus["last_round"]) ?? null,
+  };
+}
 
 export function adminEngineRoutes() {
   const r = new OpenAPIHono<{ Variables: AppVars }>();
@@ -19,7 +30,7 @@ export function adminEngineRoutes() {
       path: "/engine",
       summary: "引擎状态",
       description:
-        "最近轮次摘要；last_round 为 null 表示引擎尚未跑过。状态存储细节归同步引擎设计。",
+        "同步引擎单行快照（engine_status）；last_round 为 null 表示尚未跑过。sync_interval_ms 只读。",
       tags: ["引擎"],
       security: [{ adminSession: [] }],
       responses: {
@@ -31,17 +42,10 @@ export function adminEngineRoutes() {
       },
     }),
     async (c) => {
-      return c.json(engineStatus, 200);
+      const row = await c.get("repos").engine.getSnapshot();
+      return c.json(toEngineStatusView(row), 200);
     },
   );
 
   return r;
-}
-
-export function setEngineStatus(next: EngineStatus) {
-  engineStatus = next;
-}
-
-export function getEngineStatus(): EngineStatus {
-  return engineStatus;
 }

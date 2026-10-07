@@ -1,0 +1,13 @@
+{
+  "name": "@new-api-key-usage/engine",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@new-api-key-usage/core": "workspace:*",
+    "@new-api-key-usage/db": "workspace:*"
+  }
+}

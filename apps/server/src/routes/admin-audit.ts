@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { unixToIso, type AuditLogItem } from "@new-api-key-usage/core";
+import { toUnixSec, type AuditLogItem } from "@new-api-key-usage/core";
 import {
   requireAdminSession,
   type AppVars,
@@ -56,7 +56,7 @@ export function adminAuditRoutes() {
       });
       const items: AuditLogItem[] = rows.map((row) => ({
         id: row.id,
-        created_at: unixToIso(row.created_at)!,
+        created_at: toUnixSec(row.created_at)!,
         operator: row.operator,
         domain: row.domain as AuditLogItem["domain"],
         action: row.action,

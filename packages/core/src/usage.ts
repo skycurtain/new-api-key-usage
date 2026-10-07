@@ -62,3 +62,23 @@ export function addUsage(a: UsageSum, b: UsageSum): UsageSum {
     quota_usd: a.quota_usd,
   };
 }
+
+/** 解析日志行 other JSON（billing_source / subscription_id） */
+export function parseOtherJson(other: string | undefined | null): {
+  billing_source: string | null;
+  subscription_id: number | null;
+  raw: Record<string, unknown> | null;
+} {
+  if (!other) return { billing_source: null, subscription_id: null, raw: null };
+  try {
+    const o = JSON.parse(other) as Record<string, unknown>;
+    return {
+      billing_source: typeof o.billing_source === "string" ? o.billing_source : null,
+      subscription_id:
+        typeof o.subscription_id === "number" ? o.subscription_id : null,
+      raw: o,
+    };
+  } catch {
+    return { billing_source: null, subscription_id: null, raw: null };
+  }
+}

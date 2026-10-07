@@ -1,5 +1,5 @@
-/** ISO 8601 UTC 字符串，如 2026-10-02T14:22:05Z */
-export type Iso8601Utc = string;
+/** Unix 秒（UTC 时刻）——API 响应时刻字段统一此类型 */
+export type UnixSec = number;
 
 /** 支付金额（币种无关数值） */
 export type PaidAmount = number;
@@ -24,7 +24,7 @@ export interface UsageTotals {
 export interface LogItem {
   id: number;
   api_key_id: number;
-  created_at: Iso8601Utc;
+  created_at: UnixSec;
   token_name: string;
   model_name: string;
   type: number;
@@ -45,24 +45,24 @@ export interface KeyItem {
   status: KeyStatus;
   member_id: number | null;
   member_name: string | null;
-  registered_at: Iso8601Utc;
-  log_synced_at: Iso8601Utc | null;
-  usage_synced_at: Iso8601Utc | null;
+  registered_at: UnixSec;
+  log_synced_at: UnixSec | null;
+  usage_synced_at: UnixSec | null;
   total_used: number;
   total_available: number;
   total_granted: number;
   unlimited_quota: boolean;
-  expires_at: Iso8601Utc | null;
+  expires_at: UnixSec | null;
 }
 
 export interface PaymentItem {
   id: number;
   kind: PaymentKind;
-  paid_at: Iso8601Utc;
+  paid_at: UnixSec;
   paid_amount: PaidAmount;
   remark: string;
-  period_start: Iso8601Utc | null;
-  period_end: Iso8601Utc | null;
+  period_start: UnixSec | null;
+  period_end: UnixSec | null;
   subscription_id: number | null;
   quota_granted: number | null;
   quota_usd: QuotaUsd;
@@ -73,14 +73,14 @@ export interface MemberItem {
   name: string;
   remark: string;
   status: MemberStatus;
-  token_issued_at: Iso8601Utc | null;
-  created_at: Iso8601Utc;
+  token_issued_at: UnixSec | null;
+  created_at: UnixSec;
   key_count: number;
 }
 
 export interface AuditLogItem {
   id: number;
-  created_at: Iso8601Utc;
+  created_at: UnixSec;
   operator: string | null;
   domain: "key" | "payment" | "member" | "account";
   action: string;
@@ -93,7 +93,7 @@ export interface Paginated<T> {
 }
 
 export interface EngineLastRound {
-  started_at: Iso8601Utc;
+  started_at: UnixSec;
   keys_total: number;
   succeeded: number;
   failed: number;
@@ -107,7 +107,7 @@ export interface EngineStatus {
 
 export interface QpuLatest {
   qpu: number;
-  effective_from: Iso8601Utc;
+  effective_from: UnixSec;
 }
 
 export type AuditAction =

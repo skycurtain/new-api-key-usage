@@ -3,7 +3,7 @@ import {
   ERR,
   resolveQpuTimeline,
   sumUsage,
-  unixToIso,
+  toUnixSec,
   type LogItem,
 } from "@new-api-key-usage/core";
 import {
@@ -25,7 +25,7 @@ const usageTotals = z.object({
 });
 
 const overviewSchema = z.object({
-  data_cutoff: z.string().nullable(),
+  data_cutoff: z.number().int().nullable(),
   unassigned_subscription: usageTotals,
   by_source: z.array(
     z.object({
@@ -40,7 +40,7 @@ const overviewSchema = z.object({
       member_id: z.number().int().nullable(),
       member_name: z.string().nullable(),
       key_count: z.number().int(),
-      data_cutoff: z.string().nullable(),
+      data_cutoff: z.number().int().nullable(),
       usage: usageTotals,
     }),
   ),
@@ -50,7 +50,7 @@ const overviewSchema = z.object({
       token_name: z.string(),
       member_id: z.number().int().nullable(),
       status: z.string(),
-      data_cutoff: z.string().nullable(),
+      data_cutoff: z.number().int().nullable(),
       usage: usageTotals,
     }),
   ),
@@ -58,7 +58,7 @@ const overviewSchema = z.object({
 
 const qpuLatestSchema = z.object({
   qpu: z.number(),
-  effective_from: z.string(),
+  effective_from: z.number().int(),
 });
 
 const timeRange = z.object({
@@ -106,14 +106,14 @@ export function adminUsageRoutes() {
       const latest = await c.get("repos").qpu.latest();
       if (!latest) {
         return c.json(
-          { qpu: 500_000, effective_from: "1970-01-01T00:00:00Z" },
+          { qpu: 500_000, effective_from: 0 },
           200,
         );
       }
       return c.json(
         {
           qpu: latest.qpu,
-          effective_from: unixToIso(latest.effective_from)!,
+          effective_from: toUnixSec(latest.effective_from)!,
         },
         200,
       );
@@ -208,7 +208,7 @@ export function adminUsageRoutes() {
           token_name: v.token_name,
           member_id: v.member_id,
           status: v.status,
-          data_cutoff: unixToIso(v.log_synced_at),
+          data_cutoff: toUnixSec(v.log_synced_at),
           usage: sumUsage(v.rows, timeline),
         }))
         .sort((a, b) => b.usage.quota - a.usage.quota);
@@ -248,13 +248,13 @@ export function adminUsageRoutes() {
         member_id: b.member_id,
         member_name: b.member_name,
         key_count: b.key_count,
-        data_cutoff: unixToIso(b.cutoff),
+        data_cutoff: toUnixSec(b.cutoff),
         usage: sumUsage(b.rows, timeline),
       }));
 
       return c.json(
         {
-          data_cutoff: unixToIso(data_cutoff),
+          data_cutoff: toUnixSec(data_cutoff),
           unassigned_subscription,
           by_source,
           by_member,
@@ -326,7 +326,7 @@ export function adminUsageRoutes() {
         return {
           id: row.id,
           api_key_id: row.api_key_id,
-          created_at: unixToIso(row.created_at)!,
+          created_at: toUnixSec(row.created_at)!,
           token_name: row.token_name,
           model_name: row.model_name,
           type: row.type,

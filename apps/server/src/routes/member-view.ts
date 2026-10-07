@@ -3,7 +3,7 @@ import {
   ERR,
   resolveQpuTimeline,
   sumUsage,
-  unixToIso,
+  toUnixSec,
   type LogItem,
   type PaymentItem,
 } from "@new-api-key-usage/core";
@@ -156,7 +156,7 @@ export function memberViewRoutes() {
       const keys = [...keyMap.entries()].map(([key_id, v]) => ({
         key_id,
         token_name: v.token_name,
-        log_synced_at: unixToIso(v.log_synced_at),
+        log_synced_at: toUnixSec(v.log_synced_at),
         usage: sumUsage(v.rows, timeline),
       }));
 
@@ -185,11 +185,11 @@ export function memberViewRoutes() {
         payments.push({
           id: p.id,
           kind: p.kind as PaymentItem["kind"],
-          paid_at: unixToIso(p.paid_at)!,
+          paid_at: toUnixSec(p.paid_at)!,
           paid_amount: p.paid_amount,
           remark: p.remark,
-          period_start: unixToIso(p.period_start),
-          period_end: unixToIso(p.period_end),
+          period_start: toUnixSec(p.period_start),
+          period_end: toUnixSec(p.period_end),
           subscription_id: p.subscription_id,
           quota_granted: p.quota_granted,
           quota_usd:
@@ -272,7 +272,7 @@ export function memberViewRoutes() {
         return {
           id: row.id,
           api_key_id: row.api_key_id,
-          created_at: unixToIso(row.created_at)!,
+          created_at: toUnixSec(row.created_at)!,
           token_name: row.token_name ?? "",
           model_name: row.model_name,
           type: row.type,

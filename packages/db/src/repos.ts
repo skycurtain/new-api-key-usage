@@ -2,6 +2,7 @@ import type { Db } from "./index.ts";
 import {
   apiKeys,
   auditLogs,
+  engineStatus,
   members,
   payments,
   qpuHistory,
@@ -10,6 +11,7 @@ import {
   users,
   type ApiKeyRow,
   type AuditLogRow,
+  type EngineStatusRow,
   type MemberRow,
   type PaymentRow,
   type SessionRow,
@@ -147,6 +149,54 @@ export function createRepos(db: Db) {
           return base.where(and(...conds));
         }
         return base;
+      },
+      async listActive() {
+        return db
+          .select({
+            id: apiKeys.id,
+            key_hash: apiKeys.key_hash,
+            key_ciphertext: apiKeys.key_ciphertext,
+            status: apiKeys.status,
+            member_id: apiKeys.member_id,
+            token_name: apiKeys.token_name,
+          })
+          .from(apiKeys)
+          .where(eq(apiKeys.status, "active"))
+          .orderBy(asc(apiKeys.id));
+      },
+      async insertLog(values: {
+        api_key_id: number;
+        dedupe_key: string;
+        billing_source: string | null;
+        subscription_id: number | null;
+        user_id: number;
+        created_at: Date;
+        type: number;
+        content: string;
+        username: string;
+        token_name: string;
+        model_name: string;
+        quota: number;
+        prompt_tokens: number;
+        completion_tokens: number;
+        use_time: number;
+        is_stream: boolean;
+        channel: number;
+        channel_name: string;
+        token_id: number;
+        group_name: string;
+        ip: string;
+        request_id: string;
+        upstream_request_id: string | null;
+        other: unknown;
+      }): Promise<boolean> {
+        const before = await db
+          .select({ n: count() })
+          .from(usageLogs)
+          .where(eq(usageLogs.dedupe_key, values.dedupe_key));
+        if ((before[0]?.n ?? 0) > 0) return false;
+        await db.insert(usageLogs).values(values).onConflictDoNothing();
+        return true;
       },
       async findById(id: number): Promise<ApiKeyRow | null> {
         const rows = await db
@@ -293,6 +343,43 @@ export function createRepos(db: Db) {
       },
     },
 
+    engine: {
+      async upsertSnapshot(values: {
+        running: boolean;
+        sync_interval_ms: number;
+        last_round: unknown;
+      }): Promise<EngineStatusRow> {
+        const [row] = await db
+          .insert(engineStatus)
+          .values({
+            id: 1,
+            running: values.running,
+            sync_interval_ms: values.sync_interval_ms,
+            last_round: values.last_round,
+            updated_at: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: engineStatus.id,
+            set: {
+              running: values.running,
+              sync_interval_ms: values.sync_interval_ms,
+              last_round: values.last_round,
+              updated_at: new Date(),
+            },
+          })
+          .returning();
+        return row!;
+      },
+      async getSnapshot(): Promise<EngineStatusRow | null> {
+        const rows = await db
+          .select()
+          .from(engineStatus)
+          .where(eq(engineStatus.id, 1))
+          .limit(1);
+        return rows[0] ?? null;
+      },
+    },
+
     payments: {
       async listAll(): Promise<PaymentRow[]> {
         return db.select().from(payments).orderBy(desc(payments.paid_at));
@@ -353,6 +440,9 @@ export function createRepos(db: Db) {
           .orderBy(desc(qpuHistory.effective_from))
           .limit(1);
         return rows[0] ?? null;
+      },
+      async insertChange(qpu: number, effective_from: Date): Promise<void> {
+        await db.insert(qpuHistory).values({ qpu, effective_from });
       },
     },
 

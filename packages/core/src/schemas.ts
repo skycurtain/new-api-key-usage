@@ -52,7 +52,7 @@ export const usageTotals = z.object({
 export const logItem = z.object({
   id: z.number().int(),
   api_key_id: z.number().int(),
-  created_at: z.string(),
+  created_at: z.number().int(),
   token_name: z.string(),
   model_name: z.string(),
   type: z.number().int(),
@@ -78,14 +78,14 @@ export const keyItem = z.object({
   status: z.enum(["active", "disabled"]),
   member_id: z.number().int().nullable(),
   member_name: z.string().nullable(),
-  registered_at: z.string(),
-  log_synced_at: z.string().nullable(),
-  usage_synced_at: z.string().nullable(),
+  registered_at: z.number().int(),
+  log_synced_at: z.number().int().nullable(),
+  usage_synced_at: z.number().int().nullable(),
   total_used: z.number(),
   total_available: z.number(),
   total_granted: z.number(),
   unlimited_quota: z.boolean(),
-  expires_at: z.string().nullable(),
+  expires_at: z.number().int().nullable(),
 });
 
 export const registerKeyBody = z.object({
@@ -103,8 +103,8 @@ export const memberItem = z.object({
   name: z.string(),
   remark: z.string(),
   status: z.enum(["active", "disabled"]),
-  token_issued_at: z.string().nullable(),
-  created_at: z.string(),
+  token_issued_at: z.number().int().nullable(),
+  created_at: z.number().int(),
   key_count: z.number().int(),
 });
 
@@ -132,11 +132,11 @@ export const memberMe = z.object({
 export const paymentItem = z.object({
   id: z.number().int(),
   kind: z.enum(["subscription", "topup"]),
-  paid_at: z.string(),
+  paid_at: z.number().int(),
   paid_amount: z.number(),
   remark: z.string(),
-  period_start: z.string().nullable(),
-  period_end: z.string().nullable(),
+  period_start: z.number().int().nullable(),
+  period_end: z.number().int().nullable(),
   subscription_id: z.number().int().nullable(),
   quota_granted: z.number().int().nullable(),
   quota_usd: z.string(),
@@ -144,9 +144,10 @@ export const paymentItem = z.object({
 
 export const engineStatus = z.object({
   running: z.boolean(),
+  sync_interval_ms: z.number().int().optional(),
   last_round: z
     .object({
-      started_at: z.string(),
+      started_at: z.number().int(),
       keys_total: z.number().int(),
       succeeded: z.number().int(),
       failed: z.number().int(),
@@ -157,7 +158,7 @@ export const engineStatus = z.object({
 
 export const auditLogItem = z.object({
   id: z.number().int(),
-  created_at: z.string(),
+  created_at: z.number().int(),
   operator: z.string().nullable(),
   domain: z.enum(["key", "payment", "member", "account"]),
   action: z.string(),
@@ -182,7 +183,7 @@ export const memberOverview = z.object({
     z.object({
       key_id: z.number().int(),
       token_name: z.string(),
-      log_synced_at: z.string().nullable(),
+      log_synced_at: z.number().int().nullable(),
       usage: usageTotals,
     }),
   ),

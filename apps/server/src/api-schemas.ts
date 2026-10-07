@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { extendZodWithOpenApi } from "@hono/zod-openapi";
+/** 必须先扩展 zod，再加载 core schema（见 zod-openapi-setup） */
+import "./zod-openapi-setup.ts";
 import {
   changePasswordBody,
   createMemberBody,
@@ -24,21 +24,34 @@ import {
   usernameBody,
 } from "@new-api-key-usage/core";
 
-// OpenAPI 组件命名只在 server 层装饰，core 保持 Web 标准中立
-extendZodWithOpenApi(z);
+/** OpenAPI 组件命名只在 server 层装饰，core 保持 Web 标准中立 */
+function nameSchema<T extends { openapi?: (n: string) => unknown }>(
+  schema: T,
+  name: string,
+): T {
+  return typeof schema.openapi === "function"
+    ? (schema.openapi(name) as T)
+    : schema;
+}
 
-export const errorSchema = errorEnvelope.openapi("ErrorEnvelope");
-export const setupStateSchema = setupState.openapi("SetupState");
-export const engineStatusSchema = engineStatus.openapi("EngineStatus");
-export const keyItemSchema = keyItem.openapi("KeyItem");
-export const memberItemSchema = memberItem.openapi("MemberItem");
-export const memberWithTokenSchema = memberWithToken.openapi("MemberWithToken");
-export const memberMeSchema = memberMe.openapi("MemberMe");
-export const memberOverviewSchema = memberOverview.openapi("MemberOverview");
-export const logItemSchema = logItem.openapi("LogItem");
-export const logPageSchema = logPage.openapi("LogPage");
-export const paymentItemSchema = paymentItem.openapi("PaymentItem");
-export const auditLogItemSchema = auditLogItem.openapi("AuditLogItem");
+export const errorSchema = nameSchema(errorEnvelope, "ErrorEnvelope");
+export const setupStateSchema = nameSchema(setupState, "SetupState");
+export const engineStatusSchema = nameSchema(engineStatus, "EngineStatus");
+export const keyItemSchema = nameSchema(keyItem, "KeyItem");
+export const memberItemSchema = nameSchema(memberItem, "MemberItem");
+export const memberWithTokenSchema = nameSchema(
+  memberWithToken,
+  "MemberWithToken",
+);
+export const memberMeSchema = nameSchema(memberMe, "MemberMe");
+export const memberOverviewSchema = nameSchema(
+  memberOverview,
+  "MemberOverview",
+);
+export const logItemSchema = nameSchema(logItem, "LogItem");
+export const logPageSchema = nameSchema(logPage, "LogPage");
+export const paymentItemSchema = nameSchema(paymentItem, "PaymentItem");
+export const auditLogItemSchema = nameSchema(auditLogItem, "AuditLogItem");
 
 export {
   changePasswordBody as changePasswordBodySchema,
