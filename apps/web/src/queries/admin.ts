@@ -131,6 +131,7 @@ export function useCreateMember() {
     mutationFn: createMember,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.admin.members() });
+      void qc.invalidateQueries({ queryKey: ["admin", "keys"] });
     },
   });
 }

@@ -1,16 +1,22 @@
 import type { MemberItem } from "@new-api-key-usage/core";
 import { adminHttp } from "../http.ts";
 
+export type MemberWithToken = {
+  member: MemberItem;
+  token: string;
+};
+
 export async function fetchMembers(): Promise<MemberItem[]> {
   const { data } = await adminHttp.get<MemberItem[]>("/members");
   return data;
 }
 
+/** 开户：响应含令牌明文（仅此一次） */
 export async function createMember(body: {
   name: string;
   remark?: string;
-}): Promise<MemberItem> {
-  const { data } = await adminHttp.post<MemberItem>("/members", body);
+}): Promise<MemberWithToken> {
+  const { data } = await adminHttp.post<MemberWithToken>("/members", body);
   return data;
 }
 
@@ -22,6 +28,7 @@ export async function patchMember(
   return data;
 }
 
+/** 重发：旧令牌即刻失效，明文仅此一次 */
 export async function issueMemberToken(id: number): Promise<{ token: string }> {
   const { data } = await adminHttp.post<{ token: string }>(`/members/${id}/token`);
   return data;

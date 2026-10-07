@@ -6,6 +6,7 @@ import { computed, reactive, ref, watch } from "vue";
 import type { MemberItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import { useCreateMember, useRegisterKey } from "@/queries/admin.ts";
+import MemberTokenModal from "@/components/admin/member-token-modal.vue";
 
 const props = defineProps<{
   open: boolean;
@@ -30,6 +31,9 @@ const resultMsg = ref<{ type: "success" | "error" | "warning"; text: string } | 
 const showNewMember = ref(false);
 const newMemberName = ref("");
 const newMemberRemark = ref("");
+const tokenOpen = ref(false);
+const plainToken = ref("");
+const tokenMemberName = ref("");
 
 watch(
   () => props.open,
@@ -106,15 +110,22 @@ async function onCreateMember() {
   const name = newMemberName.value.trim();
   if (!name) return;
   try {
-    const m = await createMember.mutateAsync({
+    const res = await createMember.mutateAsync({
       name,
       remark: newMemberRemark.value.trim(),
     });
-    form.member_id = m.id;
+    form.member_id = res.member.id;
     showNewMember.value = false;
     newMemberName.value = "";
     newMemberRemark.value = "";
-    resultMsg.value = { type: "success", text: `已新建成员「${m.name}」并选为归属` };
+    // POST /members 必回明文令牌——立刻展示，避免遗失
+    plainToken.value = res.token;
+    tokenMemberName.value = res.member.name;
+    tokenOpen.value = true;
+    resultMsg.value = {
+      type: "success",
+      text: `已新建成员「${res.member.name}」并选为归属，请保存下方令牌`,
+    };
   } catch (e) {
     const err = e as ApiError;
     resultMsg.value = { type: "error", text: err.message || "新建成员失败" };
@@ -187,6 +198,12 @@ async function onCreateMember() {
         :message="resultMsg.text"
       />
     </a-form>
+    <MemberTokenModal
+      v-model:open="tokenOpen"
+      :token="plainToken"
+      :member-name="tokenMemberName"
+      @update:open="(v: boolean) => { if (!v) { plainToken = ''; tokenMemberName = ''; } }"
+    />
   </a-modal>
 </template>
 
