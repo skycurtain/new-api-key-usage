@@ -6,7 +6,7 @@ import {
   type KeyListFilters,
 } from "@/api/admin/keys.ts";
 import { fetchOverview } from "@/api/admin/overview.ts";
-import { fetchEngine } from "@/api/admin/engine.ts";
+import { fetchEngine, fetchQpuLatest } from "@/api/admin/engine.ts";
 import {
   createPayment,
   deletePayment,
@@ -37,6 +37,13 @@ export function useEngine() {
     queryKey: qk.admin.engine(),
     queryFn: fetchEngine,
     refetchInterval: 60_000,
+  });
+}
+
+export function useQpuLatest() {
+  return useQuery({
+    queryKey: qk.admin.qpuLatest(),
+    queryFn: fetchQpuLatest,
   });
 }
 
