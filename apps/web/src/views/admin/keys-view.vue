@@ -1,10 +1,13 @@
 <script setup lang="ts">
-/** Key 管理占位——登记 / 启停 / 归属（交互设计-key管理） */
+import PageHeader from "@/components/common/page-header.vue";
 </script>
 
 <template>
   <section>
-    <h1>Key 管理</h1>
-    <p>登记、启停、归属（占位，待 UI 设计）。</p>
+    <PageHeader
+      title="Key 管理"
+      subtitle="登记、启停、归属（信息结构见交互设计-key管理）"
+    />
+    <a-skeleton active :paragraph="{ rows: 4 }" />
   </section>
 </template>

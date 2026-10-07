@@ -16,6 +16,7 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@antdv-next/icons": "^1.1.2",
     "@new-api-key-usage/core": "workspace:*",
     "@tanstack/vue-query": "^5.104.1",
     "@vueuse/core": "15.0.0",

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-/** 登录 + 空库三态分流（交互登录篇）；视觉细节待与 antdv-next 工具链一并设计 */
-import { computed, ref } from "vue";
+/** 登录 + 空库三态分流（交互登录篇） */
+import type { FormInstance } from "antdv-next";
+import { computed, reactive, ref, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLogin, useSetup, useSetupState } from "@/queries/session.ts";
 
@@ -9,30 +10,34 @@ const router = useRouter();
 const setupState = useSetupState();
 const login = useLogin();
 const setup = useSetup();
+const formRef = shallowRef<FormInstance>();
 
-const username = ref("");
-const password = ref("");
-const passwordConfirm = ref("");
+const model = reactive({
+  username: "",
+  password: "",
+  passwordConfirm: "",
+});
 const error = ref("");
 
 const isSetup = computed(() => setupState.data.value?.initialized === false);
+const loading = computed(() => login.isPending.value || setup.isPending.value);
 
-async function onSubmit() {
+async function onFinish() {
   error.value = "";
   try {
     if (isSetup.value) {
-      if (password.value !== passwordConfirm.value) {
+      if (model.password !== model.passwordConfirm) {
         error.value = "两次输入的密码不一致";
         return;
       }
       await setup.mutateAsync({
-        username: username.value,
-        password: password.value,
+        username: model.username,
+        password: model.password,
       });
     } else {
       await login.mutateAsync({
-        username: username.value,
-        password: password.value,
+        username: model.username,
+        password: model.password,
       });
     }
     const redirect = route.query.redirect;
@@ -44,46 +49,66 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="login-view">
-    <h1>{{ isSetup ? "初始化管理员" : "管理面登录" }}</h1>
-    <form @submit.prevent="onSubmit">
-      <label>
-        用户名
-        <input v-model="username" name="username" autocomplete="username" required />
-      </label>
-      <label>
-        密码
-        <input
-          v-model="password"
+  <div class="login-shell">
+    <a-card class="login-shell__card" :title="isSetup ? '初始化管理员' : '管理面登录'">
+      <a-form
+        ref="formRef"
+        :model="model"
+        layout="vertical"
+        auto-complete="off"
+        @finish="onFinish"
+      >
+        <a-form-item
+          name="username"
+          label="用户名"
+          :rules="[{ required: true, message: '请输入用户名' }]"
+        >
+          <a-input v-model:value="model.username" autocomplete="username" />
+        </a-form-item>
+        <a-form-item
           name="password"
-          type="password"
-          autocomplete="current-password"
-          required
+          label="密码"
+          :rules="[{ required: true, message: '请输入密码' }]"
+        >
+          <a-input-password
+            v-model:value="model.password"
+            autocomplete="current-password"
+          />
+        </a-form-item>
+        <a-form-item
+          v-if="isSetup"
+          name="passwordConfirm"
+          label="确认密码"
+          :rules="[{ required: true, message: '请再次输入密码' }]"
+        >
+          <a-input-password v-model:value="model.passwordConfirm" />
+        </a-form-item>
+        <a-alert
+          v-if="error"
+          type="error"
+          show-icon
+          :message="error"
+          style="margin-bottom: 16px"
         />
-      </label>
-      <label v-if="isSetup">
-        确认密码
-        <input v-model="passwordConfirm" name="password_confirm" type="password" required />
-      </label>
-      <button type="submit" :disabled="login.isPending.value || setup.isPending.value">
-        {{ isSetup ? "完成设置" : "登录" }}
-      </button>
-    </form>
-    <p v-if="error" role="alert">{{ error }}</p>
+        <a-button type="primary" html-type="submit" block :loading="loading">
+          {{ isSetup ? "完成设置" : "登录" }}
+        </a-button>
+      </a-form>
+    </a-card>
   </div>
 </template>
 
 <style scoped>
-.login-view {
-  max-width: 360px;
-  margin: 10vh auto;
+.login-shell {
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+  padding: 24px;
 }
-.login-view label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+
+.login-shell__card {
+  width: 380px;
 }
 </style>

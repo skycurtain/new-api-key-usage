@@ -1,10 +1,13 @@
 <script setup lang="ts">
-/** 支付记录占位——订阅/充值同构表单（交互设计-支付记录） */
+import PageHeader from "@/components/common/page-header.vue";
 </script>
 
 <template>
   <section>
-    <h1>支付记录</h1>
-    <p>订阅 / 充值登记与核对（占位，待 UI 设计）。</p>
+    <PageHeader
+      title="支付记录"
+      subtitle="订阅 / 充值登记与核对（信息结构见交互设计-支付记录）"
+    />
+    <a-skeleton active :paragraph="{ rows: 4 }" />
   </section>
 </template>

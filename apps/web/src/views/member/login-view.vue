@@ -1,21 +1,23 @@
 <script setup lang="ts">
 /** 成员令牌登录壳——明文仅存 sessionStorage（交互登录篇 §4） */
-import { ref } from "vue";
+import type { FormInstance } from "antdv-next";
+import { reactive, ref, shallowRef } from "vue";
 import { useRouter } from "vue-router";
 import { useMemberTokenStore } from "@/stores/member-token.ts";
 import { fetchMe } from "@/api/member/me.ts";
 
 const router = useRouter();
 const tokenStore = useMemberTokenStore();
-const token = ref("");
+const formRef = shallowRef<FormInstance>();
+const model = reactive({ token: "" });
 const error = ref("");
 const pending = ref(false);
 
-async function onSubmit() {
+async function onFinish() {
   error.value = "";
   pending.value = true;
   try {
-    tokenStore.setToken(token.value.trim());
+    tokenStore.setToken(model.token.trim());
     const me = await fetchMe();
     tokenStore.setMemberName(me.name);
     void router.replace({ name: "member-home" });
@@ -29,30 +31,48 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="member-login">
-    <h1>成员入口</h1>
-    <form @submit.prevent="onSubmit">
-      <label>
-        令牌
-        <input v-model="token" name="token" type="password" required />
-      </label>
-      <button type="submit" :disabled="pending">进入</button>
-    </form>
-    <p v-if="error" role="alert">{{ error }}</p>
+  <div class="member-login-shell">
+    <a-card class="member-login-shell__card" title="成员入口">
+      <a-form
+        ref="formRef"
+        :model="model"
+        layout="vertical"
+        auto-complete="off"
+        @finish="onFinish"
+      >
+        <a-form-item
+          name="token"
+          label="令牌"
+          :rules="[{ required: true, message: '请输入成员令牌' }]"
+        >
+          <a-input-password v-model:value="model.token" placeholder="粘贴成员令牌" />
+        </a-form-item>
+        <a-alert
+          v-if="error"
+          type="error"
+          show-icon
+          :message="error"
+          style="margin-bottom: 16px"
+        />
+        <a-button type="primary" html-type="submit" block :loading="pending">
+          进入
+        </a-button>
+      </a-form>
+    </a-card>
   </div>
 </template>
 
 <style scoped>
-.member-login {
-  max-width: 360px;
-  margin: 12vh auto;
+.member-login-shell {
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+  padding: 24px;
 }
-.member-login label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+
+.member-login-shell__card {
+  width: 380px;
 }
 </style>

@@ -1,10 +1,13 @@
 <script setup lang="ts">
-/** 成员管理占位——开户 / 令牌 / 停用（交互设计-成员管理） */
+import PageHeader from "@/components/common/page-header.vue";
 </script>
 
 <template>
   <section>
-    <h1>成员管理</h1>
-    <p>开户、令牌签发、停用（占位，待 UI 设计）。</p>
+    <PageHeader
+      title="成员管理"
+      subtitle="开户、令牌、停用（信息结构见交互设计-成员管理）"
+    />
+    <a-skeleton active :paragraph="{ rows: 4 }" />
   </section>
 </template>
