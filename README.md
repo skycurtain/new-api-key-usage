@@ -43,6 +43,7 @@
 | [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 16 端点：引导与会话三态、引擎状态、总览聚合、key 登记四态、下钻明细、支付、成员（令牌明文仅一次）、审计；5 项裁定（经审通过）+ 4 项遗留（key 详情已裁决：实现期定） | 定稿（2026-10-02） |
 | [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：令牌验证与页头、单页聚合（含支付参数卡判定）、日志明细（DTO 与管理面同构）；4 项裁定（经审通过）+ 1 项遗留 | 定稿（2026-10-02） |
 | [`docs/design/骨架搭建指南.md`](docs/design/骨架搭建指南.md) | monorepo 骨架 + 在线文档页的一次性执行指南（供作者或任一 AI 执行者）：前置、步骤、验收清单、红线、依据文档索引 | 草案（待审阅） |
+| [`docs/design/同步引擎设计.md`](docs/design/同步引擎设计.md) | 独立 `apps/engine` 进程：手写 `setTimeout` 轮次、失败只记录、`engine_status` 快照供 `/api/admin/engine`；周期可配、**不为 CFW 预留** | 定稿（2026-10-05） |
 | [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 计费平台在 NewAPI 中可用的接口参考：鉴权档位、请求与返回结构、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
 
 - 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（我们定的方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）

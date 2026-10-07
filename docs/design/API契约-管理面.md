@@ -67,6 +67,7 @@
 ```json
 {
   "running": true,
+  "sync_interval_ms": 300000,
   "last_round": {
     "started_at": "2026-10-02T08:00:00Z",
     "keys_total": 18, "succeeded": 16, "failed": 2,
@@ -75,7 +76,8 @@
 }
 ```
 
-`failed_api_key_ids` 支撑 Key 管理「最近轮次失败」筛选与健康带失败数跳转；`last_round` 为 `null`（引擎尚未跑过）合法。**状态存储与字段细节归同步引擎设计（待立稿），两稿以本端点字段为衔接对齐点。**
+`sync_interval_ms`：当前同步周期（毫秒），**只读观测**，经 env 配置、无修改接口。  
+`failed_api_key_ids` 支撑 Key 管理「最近轮次失败」筛选与健康带失败数跳转；`last_round` 为 `null`（引擎尚未跑过）合法。状态存储为 `engine_status` 单行快照（《同步引擎设计》§5）。
 
 ## 4. 全员总览
 
@@ -264,5 +266,5 @@
 
 1. **管理面日志明细的界面落点**——**已裁决：实现期定**（先做「跳 Key 管理定位到该行」，详情视图待真实数据再定）；
 2. **审计日志表结构**——归技术稿，以本文 §9 DTO 字段为对齐锚点；
-3. **`GET /api/admin/engine` 的状态存储**——归同步引擎设计（待立稿），两稿衔接对齐；
+3. **`GET /api/admin/engine` 的状态存储**——已对齐《同步引擎设计》§5（`engine_status` 单行快照 + 只读 `sync_interval_ms`）；
 4. **令牌生成细节**（随机源 / 长度 / 前缀）——归技术稿。
