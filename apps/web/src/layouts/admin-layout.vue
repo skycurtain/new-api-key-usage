@@ -114,7 +114,7 @@ async function onUserMenuClick({ key }: MenuInfo) {
         @click="onMenuClick"
       />
     </a-layout-sider>
-    <a-layout>
+    <a-layout class="admin-layout__main">
       <a-layout-header class="admin-layout__header">
         <a-dropdown
           :menu="{ items: userMenuItems }"
@@ -148,8 +148,18 @@ async function onUserMenuClick({ key }: MenuInfo) {
 </template>
 
 <style scoped>
+/* 固定外壳：侧栏 + 顶栏不动，仅内容区滚动 */
 .admin-layout {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.admin-layout__main {
+  height: 100vh;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /*
@@ -218,6 +228,7 @@ async function onUserMenuClick({ key }: MenuInfo) {
 }
 
 .admin-layout__header {
+  flex: 0 0 64px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -267,13 +278,16 @@ async function onUserMenuClick({ key }: MenuInfo) {
 }
 
 .admin-layout__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #f5f5f5;
   padding: 24px;
-  min-height: calc(100vh - 64px);
 }
 
 .admin-layout__surface {
   padding: 24px;
-  min-height: calc(100vh - 64px - 48px);
+  min-height: 100%;
 }
 </style>
