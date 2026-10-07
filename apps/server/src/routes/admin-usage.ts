@@ -49,6 +49,7 @@ const overviewSchema = z.object({
       key_id: z.number().int(),
       token_name: z.string(),
       member_id: z.number().int().nullable(),
+      member_name: z.string().nullable(),
       status: z.string(),
       data_cutoff: z.number().int().nullable(),
       usage: usageTotals,
@@ -184,11 +185,15 @@ export function adminUsageRoutes() {
         }
       >();
       const keyMeta = await repos.keysExtra.listIdsWithCutoff();
+      const memberNameById = new Map(
+        (await repos.members.listAll()).map((m) => [m.id, m.name]),
+      );
       for (const k of keyMeta) {
         keyMap.set(k.id, {
           token_name: k.token_name,
           member_id: k.member_id,
-          member_name: null,
+          member_name:
+            k.member_id == null ? null : (memberNameById.get(k.member_id) ?? null),
           status: k.status,
           log_synced_at: k.log_synced_at,
           rows: [],
@@ -207,6 +212,7 @@ export function adminUsageRoutes() {
           key_id,
           token_name: v.token_name,
           member_id: v.member_id,
+          member_name: v.member_name,
           status: v.status,
           data_cutoff: toUnixSec(v.log_synced_at),
           usage: sumUsage(v.rows, timeline),
