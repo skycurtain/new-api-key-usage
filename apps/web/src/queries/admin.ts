@@ -44,6 +44,8 @@ export function useKeys(filters: () => KeyListFilters) {
   return useQuery({
     queryKey: () => qk.admin.keys(filters()),
     queryFn: () => fetchKeys(filters()),
+    // 切页回列表时立即反映最新归属/状态
+    staleTime: 0,
   });
 }
 
@@ -53,6 +55,7 @@ export function useRegisterKey() {
     mutationFn: registerKey,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "keys"] });
+      void qc.invalidateQueries({ queryKey: qk.admin.members() });
     },
   });
 }
@@ -69,6 +72,8 @@ export function usePatchKey() {
     }) => patchKey(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "keys"] });
+      // 归属变更会改成员「名下 Key 数」
+      void qc.invalidateQueries({ queryKey: qk.admin.members() });
     },
   });
 }
@@ -122,6 +127,7 @@ export function useMembers() {
   return useQuery({
     queryKey: qk.admin.members(),
     queryFn: fetchMembers,
+    staleTime: 0,
   });
 }
 

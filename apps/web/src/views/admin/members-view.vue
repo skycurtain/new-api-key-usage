@@ -46,7 +46,7 @@ function tipTitle(label: string, tip: string) {
 }
 
 const columns = [
-  { title: "名称", key: "name", width: 140 },
+  { title: "名称", key: "name", dataIndex: "name", width: 140 },
   { title: "备注", key: "remark" },
   { title: "状态", key: "status", width: 100 },
   {
