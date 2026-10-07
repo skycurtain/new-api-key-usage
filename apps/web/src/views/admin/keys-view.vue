@@ -299,7 +299,8 @@ function onRowClass(record: KeyItem) {
         <template v-else-if="column.key === 'actions'">
           <a-popconfirm
             v-if="record.status === 'active'"
-            title="停用后移出轮询清单（数据保留）。成员若仍在用它调用 API 不受影响——只有采集停止。"
+            title="停用后移出轮询清单（数据保留）"
+            description="成员若仍在用它调用 API 不受影响——只有采集停止"
             ok-text="停用"
             cancel-text="取消"
             @confirm="() => onToggleStatus(record)"
