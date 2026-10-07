@@ -70,13 +70,27 @@ const unassignedBad = computed(
         <div class="health-band__title">数据截止</div>
         <div class="health-band__body">
           <a-tooltip
-            title="取全部 key 的 log_synced_at 中最慢的那一个，代表「全池同步到什么时刻」"
+            title="取全部 key 的 log_synced_at 中最慢的那一个；某枚 key 同步失败会一直不写该字段，从而拖住全池截止"
           >
             <span>全池同步截止于 <strong>{{ formatMinute(cutoff) }}</strong>（北京时间）。</span>
           </a-tooltip>
-          <span v-if="cutoffStale" class="health-band__warn">
-            截止时间落后当前超过 2 小时，同步可能已停滞——请检查引擎日志。
-          </span>
+          <template v-if="cutoffStale">
+            <span v-if="failedCount > 0" class="health-band__warn">
+              截止时间落后超过 2 小时——通常是
+              <a-button
+                type="link"
+                size="small"
+                class="health-band__fail-btn"
+                @click="emit('go-failed-keys')"
+              >
+                同步失败的 key
+              </a-button>
+              一直未成功、拖住了全池最慢值；请到 Key 管理处理（必要时停用）。
+            </span>
+            <span v-else class="health-band__warn">
+              截止时间落后超过 2 小时，而最近轮次没有失败 key——同步链路可能停滞，请检查引擎日志。
+            </span>
+          </template>
           <span v-else-if="cutoff != null" class="health-band__ok">
             目前在正常滞后范围内。
           </span>
