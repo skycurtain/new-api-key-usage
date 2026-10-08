@@ -21,7 +21,7 @@ export function adminAuditRoutes() {
       method: "get",
       path: "/audit-logs",
       summary: "审计日志",
-      description: "分页、时间倒序；可按 domain 过滤（key/payment/member/account）",
+      description: "分页、时间倒序；可按 domain 与 [from,to) 过滤",
       tags: ["审计"],
       security: [{ adminSession: [] }],
       request: {
@@ -31,6 +31,8 @@ export function adminAuditRoutes() {
           domain: z
             .enum(["key", "payment", "member", "account"])
             .optional(),
+          from: z.string().optional(),
+          to: z.string().optional(),
         }),
       },
       responses: {
@@ -49,8 +51,12 @@ export function adminAuditRoutes() {
         200,
         Math.max(1, Number(q.page_size ?? 50) || 50),
       );
+      const from = q.from ? new Date(q.from) : undefined;
+      const to = q.to ? new Date(q.to) : undefined;
       const { rows, total } = await c.get("repos").audit.listPage({
         domain: q.domain,
+        from: from && !Number.isNaN(from.getTime()) ? from : undefined,
+        to: to && !Number.isNaN(to.getTime()) ? to : undefined,
         page,
         page_size,
       });

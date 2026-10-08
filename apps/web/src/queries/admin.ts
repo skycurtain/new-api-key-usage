@@ -176,7 +176,7 @@ export function useIssueMemberToken() {
 }
 
 export function useAuditLogs(
-  params: () => PageQuery & { domain?: string },
+  params: () => PageQuery & { domain?: string; from?: string; to?: string },
 ) {
   return useQuery({
     queryKey: () => qk.admin.auditLogs(params()),

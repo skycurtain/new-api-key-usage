@@ -323,10 +323,14 @@ export function createRepos(db: Db) {
       },
       async listPage(params: {
         domain?: string;
+        from?: Date;
+        to?: Date;
         page: number;
         page_size: number;
       }): Promise<{ rows: AuditLogRow[]; total: number }> {
         const conds = params.domain ? [eq(auditLogs.domain, params.domain)] : [];
+        if (params.from) conds.push(gte(auditLogs.created_at, params.from));
+        if (params.to) conds.push(lt(auditLogs.created_at, params.to));
         const totalRows = await db
           .select({ n: count() })
           .from(auditLogs)

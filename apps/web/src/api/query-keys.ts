@@ -31,8 +31,8 @@ export const qk = {
     payments: () => ["admin", "payments"] as const,
     qpuLatest: () => ["admin", "qpu-latest"] as const,
     members: () => ["admin", "members"] as const,
-    auditLogs: (q: PageQuery & { domain?: string }) =>
-      ["admin", "audit-logs", q.page, q.page_size, q.domain ?? ""] as const,
+    auditLogs: (q: PageQuery & { domain?: string; from?: string; to?: string }) =>
+      ["admin", "audit-logs", q.page, q.page_size, q.domain ?? "", q.from ?? "", q.to ?? ""] as const,
   },
   member: {
     me: () => ["member", "me"] as const,
