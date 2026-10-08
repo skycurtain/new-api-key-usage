@@ -636,12 +636,17 @@ export function createRepos(db: Db) {
     },
 
     keysExtra: {
-      /** 全池数据截止 = 最慢 log_synced_at */
+      /** 全池数据截止 = 仍会同步的 key 中最慢 log_synced_at（停用 key 不计） */
       async slowestLogSyncedAt(): Promise<Date | null> {
         const rows = await db
           .select({ t: sql<string | null>`min(${apiKeys.log_synced_at})::text` })
           .from(apiKeys)
-          .where(sql`${apiKeys.log_synced_at} is not null`);
+          .where(
+            and(
+              eq(apiKeys.status, "active"),
+              sql`${apiKeys.log_synced_at} is not null`,
+            ),
+          );
         const raw = rows[0]?.t;
         if (!raw) return null;
         const d = new Date(raw);

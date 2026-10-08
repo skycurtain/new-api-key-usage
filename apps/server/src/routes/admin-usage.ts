@@ -240,6 +240,7 @@ export function adminUsageRoutes() {
         };
         b.key_count += 1;
         if (
+          v.status === "active" &&
           v.log_synced_at &&
           (b.cutoff === null || v.log_synced_at < b.cutoff)
         ) {
