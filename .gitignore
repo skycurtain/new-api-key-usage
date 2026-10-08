@@ -23,3 +23,7 @@ build/
 # 测试与工具
 coverage/
 *.tsbuildinfo
+
+# Agent 本地接线（skills 本体只保留 .agents/skills）
+.claude/
+agent/
