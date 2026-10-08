@@ -73,7 +73,7 @@ const columns = [
   { title: "时间", key: "created_at", width: 150 },
   { title: "Key", key: "token_name", width: 120 },
   { title: "归属", key: "member_name", width: 110 },
-  { title: "模型", key: "model_name", width: 110 },
+  { title: "模型", key: "model_name", dataIndex: "model_name", width: 110 },
   { title: "类型", key: "type", width: 80 },
   { title: "来源", key: "source", width: 110 },
   { title: "用量", key: "usage", width: 140 },
@@ -127,10 +127,13 @@ watch(
   () => route.query,
   () => syncFromRoute(),
 );
-watch([memberId, apiKeyId, billingSource, subscriptionId, typeFilter, range], () => {
-  page.value = 1;
-  pushQuery();
-});
+watch(
+  [memberId, apiKeyId, billingSource, subscriptionId, typeFilter],
+  () => {
+    page.value = 1;
+    pushQuery();
+  },
+);
 watch(page, () => pushQuery());
 
 function sourceBadge(record: LogItem) {
@@ -185,7 +188,16 @@ onUnmounted(() => {
     <PageHeader title="调用日志" subtitle="全池模型请求查询与筛选">
       <template #actions>
         <span class="call-logs__label">时间范围</span>
-        <TimeRangePicker :model-value="range" @change="(v, k) => setRange(v, k)" />
+        <TimeRangePicker
+          :model-value="range"
+          @change="
+            (v, k) => {
+              setRange(v, k);
+              page = 1;
+              pushQuery();
+            }
+          "
+        />
       </template>
     </PageHeader>
 
