@@ -34,6 +34,7 @@
 | [`docs/design/交互设计-总览与共性.md`](docs/design/交互设计-总览与共性.md) | 交互设计总纲：访问拓扑、导航、跨页组件、状态与数值呈现约定 | 定稿（2026-10-01） |
 | [`docs/design/交互设计-登录与会话.md`](docs/design/交互设计-登录与会话.md) | 管理面登录页、引导页、改密、成员登录壳 | 同上 |
 | [`docs/design/交互设计-全员总览.md`](docs/design/交互设计-全员总览.md) | 管理面首页：健康带 + 按成员 / key 汇总 | 同上 |
+| [`docs/design/交互设计-调用日志.md`](docs/design/交互设计-调用日志.md) | 管理面调用日志：筛选、明细表、与 key/成员/总览的跳转链 | 草案（待审阅） |
 | [`docs/design/交互设计-key管理.md`](docs/design/交互设计-key管理.md) | 登记（sk-key 唯一界面露面）、启停、归属、死亡显形 | 同上 |
 | [`docs/design/交互设计-支付记录.md`](docs/design/交互设计-支付记录.md) | 订阅/充值同构表单、核对提示 | 同上 |
 | [`docs/design/交互设计-成员管理.md`](docs/design/交互设计-成员管理.md) | 开户、令牌签发/重发（明文仅一次）、停用 | 同上 |
