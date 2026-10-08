@@ -125,13 +125,22 @@ watch(
     </PageHeader>
 
     <a-alert
-      v-for="id in missingSubs"
-      :key="id"
+      v-if="missingSubs.length"
       type="warning"
       show-icon
-      :message="`观测到订阅 #${id} 有消耗，但尚无对应登记——请核对补录`"
-      style="margin-bottom: 8px"
-    />
+      style="margin-bottom: 16px"
+      :message="`观测到 ${missingSubs.length} 个订阅有消耗但尚无对应登记`"
+      description="若本部署不登记支付，可忽略此提示；需要入账的请核对补录。"
+    >
+      <template #description>
+        <div class="pay-missing__tags">
+          <a-tag v-for="id in missingSubs" :key="id">#{{ id }}</a-tag>
+        </div>
+        <div class="pay-missing__note">
+          若本部署不登记支付，可忽略此提示；需要入账的请核对补录。
+        </div>
+      </template>
+    </a-alert>
 
     <a-empty
       v-if="!paymentsQuery.isPending.value && rows.length === 0"
@@ -191,3 +200,18 @@ watch(
     <PaymentFormModal v-model:open="formOpen" :editing="editing" />
   </section>
 </template>
+
+<style scoped>
+.pay-missing__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.pay-missing__note {
+  font-size: 12px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+</style>
