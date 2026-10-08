@@ -18,7 +18,7 @@ import {
   type UsageLogRow,
   type UserRow,
 } from "./schema.ts";
-import { and, asc, count, desc, eq, gt, gte, lt, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 export interface SessionUser {
   user_id: number;
@@ -456,10 +456,10 @@ export function createRepos(db: Db) {
         from: Date;
         to: Date;
         api_key_id?: number;
-        member_id?: number;
-        billing_source?: string;
+        member_id?: number | "unassigned";
+        billing_source?: string | "none";
         subscription_id?: number;
-        type?: number;
+        type?: number | "error";
         page: number;
         page_size: number;
       }): Promise<{ rows: Array<UsageLogRow & { token_name: string }>; total: number }> {
@@ -470,16 +470,22 @@ export function createRepos(db: Db) {
         if (params.api_key_id != null) {
           conds.push(eq(usageLogs.api_key_id, params.api_key_id));
         }
-        if (params.billing_source) {
+        if (params.billing_source === "none") {
+          conds.push(isNull(usageLogs.billing_source));
+        } else if (params.billing_source) {
           conds.push(eq(usageLogs.billing_source, params.billing_source));
         }
         if (params.subscription_id != null) {
           conds.push(eq(usageLogs.subscription_id, params.subscription_id));
         }
-        if (params.type != null) {
+        if (params.type === "error") {
+          conds.push(ne(usageLogs.type, 2));
+        } else if (typeof params.type === "number") {
           conds.push(eq(usageLogs.type, params.type));
         }
-        if (params.member_id != null) {
+        if (params.member_id === "unassigned") {
+          conds.push(isNull(apiKeys.member_id));
+        } else if (params.member_id != null) {
           conds.push(eq(apiKeys.member_id, params.member_id));
         }
 

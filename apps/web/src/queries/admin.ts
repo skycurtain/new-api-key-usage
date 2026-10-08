@@ -85,7 +85,9 @@ export function usePatchKey() {
   });
 }
 
-export function useAdminLogs(params: () => TimeRange & PageQuery) {
+export function useAdminLogs(
+  params: () => Parameters<typeof fetchLogs>[0],
+) {
   return useQuery({
     queryKey: () => qk.admin.logs(params()),
     queryFn: () => fetchLogs(params()),

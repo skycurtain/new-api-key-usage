@@ -6,6 +6,7 @@ import {
   AuditOutlined,
   DashboardOutlined,
   DownOutlined,
+  FileTextOutlined,
   KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -42,6 +43,7 @@ const username = computed(
 /** 收起时仅剩图标——每项必须带 icon（交互共性侧边栏六项） */
 const items: MenuItemType[] = [
   { key: "/admin/overview", icon: DashboardOutlined, label: "总览" },
+  { key: "/admin/logs", icon: FileTextOutlined, label: "调用日志" },
   { key: "/admin/keys", icon: KeyOutlined, label: "Key 管理" },
   { key: "/admin/payments", icon: AccountBookOutlined, label: "支付记录" },
   { key: "/admin/members", icon: TeamOutlined, label: "成员管理" },

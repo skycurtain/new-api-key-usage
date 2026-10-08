@@ -297,6 +297,13 @@ function onRowClass(record: KeyItem) {
           {{ formatMinute(record.registered_at) }}
         </template>
         <template v-else-if="column.key === 'actions'">
+          <a-space>
+            <a-button
+              size="small"
+              @click="() => router.push({ path: '/admin/logs', query: { api_key_id: String(record.id) } })"
+            >
+              查调用
+            </a-button>
           <a-popconfirm
             v-if="record.status === 'active'"
             title="停用后移出轮询清单（数据保留）"
@@ -310,6 +317,7 @@ function onRowClass(record: KeyItem) {
           <a-button v-else size="small" @click="() => onToggleStatus(record)">
             启用
           </a-button>
+          </a-space>
         </template>
       </template>
     </a-table>

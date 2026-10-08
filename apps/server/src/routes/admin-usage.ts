@@ -317,12 +317,23 @@ export function adminUsageRoutes() {
         page,
         page_size,
         api_key_id: q.api_key_id ? Number(q.api_key_id) : undefined,
-        member_id: q.member_id ? Number(q.member_id) : undefined,
-        billing_source: q.billing_source || undefined,
+        member_id:
+          q.member_id === "unassigned"
+            ? "unassigned"
+            : q.member_id
+              ? Number(q.member_id)
+              : undefined,
+        billing_source:
+          q.billing_source === "none" ? "none" : q.billing_source || undefined,
         subscription_id: q.subscription_id
           ? Number(q.subscription_id)
           : undefined,
-        type: q.type != null && q.type !== "" ? Number(q.type) : undefined,
+        type:
+          q.type === "error"
+            ? "error"
+            : q.type != null && q.type !== ""
+              ? Number(q.type)
+              : undefined,
       });
 
       const items: LogItem[] = rows.map((row) => {

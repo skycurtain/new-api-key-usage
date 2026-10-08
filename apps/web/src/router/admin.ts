@@ -27,6 +27,11 @@ export const adminRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/admin/overview-view.vue"),
       },
       {
+        path: "logs",
+        name: "admin-logs",
+        component: () => import("@/views/admin/logs-view.vue"),
+      },
+      {
         path: "keys",
         name: "admin-keys",
         component: () => import("@/views/admin/keys-view.vue"),

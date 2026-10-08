@@ -26,8 +26,20 @@ export const qk = {
     overview: (range: TimeRange) =>
       ["admin", "overview", range.from, range.to] as const,
     keys: (filters: KeyFilters) => ["admin", "keys", filters] as const,
-    logs: (range: TimeRange & PageQuery) =>
-      ["admin", "logs", range.from, range.to, range.page, range.page_size] as const,
+    logs: (range: TimeRange & PageQuery & Record<string, unknown>) =>
+      [
+        "admin",
+        "logs",
+        range.from,
+        range.to,
+        range.page,
+        range.page_size,
+        range.api_key_id ?? "",
+        range.member_id ?? "",
+        range.billing_source ?? "",
+        range.subscription_id ?? "",
+        range.type ?? "",
+      ] as const,
     payments: () => ["admin", "payments"] as const,
     qpuLatest: () => ["admin", "qpu-latest"] as const,
     members: () => ["admin", "members"] as const,

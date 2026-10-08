@@ -77,7 +77,20 @@ function onMemberClick(memberId: number | null) {
 }
 
 function onKeyClick(keyId: number) {
-  void router.push({ path: "/admin/keys", query: { key_id: String(keyId) } });
+  void router.push({
+    path: "/admin/logs",
+    query: { api_key_id: String(keyId), ...range.value },
+  });
+}
+
+function onMemberLogs(memberId: number | null) {
+  void router.push({
+    path: "/admin/logs",
+    query: {
+      ...(memberId == null ? { member_id: "unassigned" } : { member_id: String(memberId) }),
+      ...range.value,
+    },
+  });
 }
 
 function goFailedKeys() {
@@ -220,6 +233,7 @@ const keyColumns = [
             <a @click="onMemberClick(record.member_id)">
               {{ record.member_name ?? "未归属" }}
             </a>
+            <a class="ov-log-link" @click="onMemberLogs(record.member_id)">查调用</a>
           </template>
           <template v-else-if="column.key === 'key_count'">
             {{ record.key_count }}

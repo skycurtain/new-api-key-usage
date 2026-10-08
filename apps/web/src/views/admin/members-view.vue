@@ -5,6 +5,10 @@
 import { computed, h, reactive, ref } from "vue";
 import { Tooltip, message } from "antdv-next";
 import { QuestionCircleOutlined } from "@antdv-next/icons";
+import { useRoute, useRouter } from "vue-router";
+
+const route = useRoute();
+const router = useRouter();
 import type { MemberItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import PageHeader from "@/components/common/page-header.vue";
@@ -58,7 +62,15 @@ const columns = [
   { title: "操作", key: "actions", width: 200 },
 ];
 
-const rows = computed(() => membersQuery.data.value ?? []);
+const rows = computed(() => {
+  const list = membersQuery.data.value ?? [];
+  const mid = route.query.member_id;
+  if (typeof mid === "string" && mid) {
+    const n = Number(mid);
+    return list.filter((m) => m.id === n);
+  }
+  return list;
+});
 
 async function onCreate() {
   createError.value = "";
@@ -156,6 +168,12 @@ async function onToggle(record: MemberItem) {
         </template>
         <template v-else-if="column.key === 'actions'">
           <a-space>
+            <a-button
+              size="small"
+              @click="() => router.push({ path: '/admin/logs', query: { member_id: String(record.id) } })"
+            >
+              查调用
+            </a-button>
             <a-popconfirm
               title="重发后旧令牌立即失效"
               description="该成员正在用的访问将中断"
