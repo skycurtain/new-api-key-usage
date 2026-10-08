@@ -84,3 +84,8 @@ export const err422 = {
   description: "校验失败",
   content: { "application/json": { schema: errorSchema } },
 } as const;
+
+export const err502 = {
+  description: "上游不可达",
+  content: { "application/json": { schema: errorSchema } },
+} as const;

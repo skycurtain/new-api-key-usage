@@ -138,3 +138,106 @@ export function normalizeExpiresAt(unixSeconds: number): Date | null {
   if (!unixSeconds) return null;
   return new Date(unixSeconds * 1000);
 }
+
+/** 平台账号订阅（GET /api/subscription/self → all_subscriptions） */
+export interface PlatformSubscription {
+  id: number;
+  plan_id: number;
+  start_time: number;
+  end_time: number;
+  status: string;
+  amount_total: number;
+  amount_used: number;
+}
+
+export interface PlatformLoginResult {
+  access_token: string;
+}
+
+/**
+ * 登录 NewAPI 控制台账号（UserAuth 体系，非 sk-key）。
+ * 密码与 access_token 均不落库，仅本次代拉使用。
+ */
+export async function platformLogin(
+  baseUrl: string,
+  username: string,
+  password: string,
+  timeoutMs = 8_000,
+): Promise<UpstreamResult<PlatformLoginResult>> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(joinUrl(baseUrl, "/api/user/login"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+      signal: ac.signal,
+    });
+    if (res.status === 401) return { ok: false, kind: "rejected" };
+    if (!res.ok) return { ok: false, kind: "http", status: res.status };
+    const body = (await res.json()) as {
+      code?: boolean | number;
+      success?: boolean;
+      data?: PlatformLoginResult & Record<string, unknown>;
+      message?: string;
+    };
+    if (body.code === false || body.success === false) {
+      return { ok: false, kind: "rejected" };
+    }
+    const token = body.data?.access_token;
+    if (typeof token !== "string" || !token) {
+      return { ok: false, kind: "http", status: res.status };
+    }
+    return { ok: true, data: { access_token: token } };
+  } catch {
+    return { ok: false, kind: "unreachable" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 用控制台 access_token 拉订阅列表（含已过期） */
+export async function fetchPlatformSubscriptions(
+  baseUrl: string,
+  accessToken: string,
+  timeoutMs = 8_000,
+): Promise<UpstreamResult<PlatformSubscription[]>> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(joinUrl(baseUrl, "/api/subscription/self"), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+      signal: ac.signal,
+    });
+    if (res.status === 401) return { ok: false, kind: "rejected" };
+    if (!res.ok) return { ok: false, kind: "http", status: res.status };
+    const body = (await res.json()) as {
+      code?: boolean | number;
+      success?: boolean;
+      data?: {
+        all_subscriptions?: Array<{ subscription?: PlatformSubscription }>;
+      };
+    };
+    if (body.code === false || body.success === false) {
+      return { ok: false, kind: "rejected" };
+    }
+    const raw = body.data?.all_subscriptions ?? [];
+    const list: PlatformSubscription[] = [];
+    for (const item of raw) {
+      const s = item?.subscription;
+      if (s && typeof s.id === "number") list.push(s);
+    }
+    return { ok: true, data: list };
+  } catch {
+    return { ok: false, kind: "unreachable" };
+  } finally {
+    clearTimeout(timer);
+  }
+}

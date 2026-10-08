@@ -7,8 +7,15 @@ import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import type { PaymentItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
-import { useCreatePayment, useQpuLatest, useUpdatePayment } from "@/queries/admin.ts";
 import { unixToBeijingWall, wallAsBeijingIso } from "@/utils/time.ts";
+import {
+  useCreatePayment,
+  usePayments,
+  useQpuLatest,
+  useUpdatePayment,
+} from "@/queries/admin.ts";
+import PlatformSubscriptionPicker from "@/components/admin/platform-subscription-picker.vue";
+import type { PlatformSubscription } from "@/api/admin/platform.ts";
 
 const props = defineProps<{
   open: boolean;
@@ -23,6 +30,7 @@ const emit = defineEmits<{
 const createPay = useCreatePayment();
 const updatePay = useUpdatePayment();
 const qpuQuery = useQpuLatest();
+const paymentsQuery = usePayments();
 const qpu = computed(() => qpuQuery.data.value?.qpu ?? null);
 
 const form = reactive({
@@ -38,6 +46,17 @@ const form = reactive({
   quota_usd_input: null as number | null,
 });
 const error = ref("");
+const pickerOpen = ref(false);
+
+function onPickSubscription(s: PlatformSubscription) {
+  form.kind = "subscription";
+  form.subscription_id = s.id;
+  form.period_start = unixToBeijingWall(s.start_time);
+  form.period_end = s.end_time > 0 ? unixToBeijingWall(s.end_time) : null;
+  form.quotaMode = "quota";
+  form.quota_granted = s.amount_total;
+  form.quota_usd_input = null;
+}
 
 const isEdit = computed(() => props.editing != null);
 const saving = computed(() => createPay.isPending.value || updatePay.isPending.value);
@@ -122,6 +141,16 @@ async function onSubmit() {
       error.value = "订阅必须填写订阅编号";
       return;
     }
+    // 一笔订阅只应登记一条支付记录；改错走「编辑」
+    const dup = (paymentsQuery.data.value ?? []).find(
+      (p) =>
+        p.subscription_id === form.subscription_id &&
+        p.id !== (props.editing?.id ?? -1),
+    );
+    if (dup) {
+      error.value = `订阅 #${form.subscription_id} 已有支付登记——请编辑原记录，不要重复登记`;
+      return;
+    }
   }
   const body = {
     kind: form.kind,
@@ -172,6 +201,14 @@ async function onSubmit() {
           <a-radio value="topup">充值</a-radio>
         </a-radio-group>
       </a-form-item>
+      <a-button
+        v-if="form.kind === 'subscription' && !isEdit"
+        class="pay-form__pick"
+        block
+        @click="pickerOpen = true"
+      >
+        从平台选择订阅（自动填写编号、期间与额度）
+      </a-button>
       <a-form-item label="金额（币种自定）" required>
         <a-input-number
           v-model:value="form.paid_amount"
@@ -242,14 +279,24 @@ async function onSubmit() {
       </a-form-item>
       <a-alert v-if="error" type="error" show-icon :message="error" />
     </a-form>
+    <PlatformSubscriptionPicker
+      v-model:open="pickerOpen"
+      @select="onPickSubscription"
+    />
   </a-modal>
 </template>
 
 <style scoped>
+.pay-form__pick {
+  margin-bottom: 16px;
+}
+
 .pay-form__note {
   margin-top: 4px;
   font-size: 12px;
   line-height: 20px;
   color: rgba(0, 0, 0, 0.45);
 }
+
+
 </style>

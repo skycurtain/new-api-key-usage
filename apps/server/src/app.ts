@@ -4,6 +4,7 @@ import { ERR, appLogger } from "@new-api-key-usage/core";
 import { createRepos, type Db } from "@new-api-key-usage/db";
 import { jsonError, type AppVars } from "./middleware.ts";
 import { adminSessionRoutes } from "./routes/admin-session.ts";
+import { adminPlatformRoutes } from "./routes/admin-platform.ts";
 import { adminEngineRoutes } from "./routes/admin-engine.ts";
 import { adminKeyRoutes } from "./routes/admin-keys.ts";
 import { adminMemberRoutes } from "./routes/admin-members.ts";
@@ -118,6 +119,7 @@ export function createApp(opts: CreateAppOptions) {
   admin.route("/", adminUsageRoutes());
   admin.route("/", adminPaymentRoutes());
   admin.route("/", adminAuditRoutes());
+  admin.route("/", adminPlatformRoutes());
   app.route("/api/admin", admin);
 
   app.route("/api/member", memberViewRoutes());

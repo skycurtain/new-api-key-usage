@@ -277,9 +277,18 @@ quota = ( (prompt_tokens − cache_tokens)             ← 提示 tokens（未�
 
 ### 4.3 订阅信息
 
-- **没有免 auth 的接口可直接查询**（作者实测，2026-09-13）；登录态的「钱包」页面可见——显示订阅编号（形如「订阅 #N」）、状态（生效中 / 已过期 + 过期时间）、总额度与已用 / 剩余
-- 订阅编号**推测**与日志 `other.subscription_id` 为同一体系（实现期以真实数据核对）
-- 对应设计：订阅信息由购买者手工录入（见 `docs/design/payments表字段设计.md`）
+- **存在完整列表接口，但鉴权是 `UserAuth()`（账号登录态），不是 sk-key**（源码 `router/api-router.go` · `controller/subscription.go:GetSubscriptionSelf`，2026-10-08 核对）：
+
+  | 路径 | 鉴权 | 能力 |
+  |------|------|------|
+  | `GET /api/subscription/self` | `UserAuth()` | 返回 `all_subscriptions`（含已过期）：`id`、`start_time`/`end_time`（Unix 秒）、`status`、`amount_total`/`amount_used`、`created_at` 等；另有 `subscriptions`、`billing_preference` |
+  | `GET /api/subscription/plans` | `UserAuth()` | 套餐列表 |
+  | `/api/subscription/admin/*` | `AdminAuth()` | 管理端绑定/作废等，与本项目无关 |
+
+- **sk-key（`TokenAuth` / `TokenAuthReadOnly`）挂不上这些路由**——钱包页在 F12 里看到的 JSON 即 `GET /api/subscription/self`，需网页登录 Cookie/会话，不是 `Authorization: Bearer sk-…`
+- 「没有免 auth 的接口」结论仍成立；**并非漏查**，而是查询面从未对 sk-key 开放。UI 只显示过期时间，是前端展示裁剪，底层数据在上述接口里
+- 订阅 `id` 与日志 `other.subscription_id` 同体系（作者 JSON 中 `id: 44/22/6` 可与日志对账）
+- 对应设计：订阅信息由购买者手工录入（`payments表字段设计`）；登记时可粘贴 `all_subscriptions` JSON 预填（见支付表单），**不引入账号密码自动化**
 
 ### 4.4 参数被忽略的情况（实测）
 
