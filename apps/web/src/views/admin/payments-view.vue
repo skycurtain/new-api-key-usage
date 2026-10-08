@@ -11,7 +11,7 @@ import PageHeader from "@/components/common/page-header.vue";
 import PaymentFormModal from "@/components/admin/payment-form-modal.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import { useDeletePayment, usePayments } from "@/queries/admin.ts";
-import { formatDate, formatDateTime } from "@/utils/time.ts";
+import { formatDateTime, toRequestIso } from "@/utils/time.ts";
 import { formatPaidAmount } from "@/utils/format.ts";
 
 const paymentsQuery = usePayments();
@@ -40,8 +40,8 @@ const columns = [
 
 function timeText(p: PaymentItem): string {
   if (p.kind === "topup") return formatDateTime(p.paid_at);
-  const start = formatDate(p.period_start);
-  const end = p.period_end == null ? "进行中" : formatDate(p.period_end);
+  const start = formatDateTime(p.period_start);
+  const end = p.period_end == null ? "进行中" : formatDateTime(p.period_end);
   return `${start} ~ ${end}`;
 }
 
@@ -76,8 +76,8 @@ async function reconcile(pays: PaymentItem[]) {
       pays.map((p) => p.subscription_id).filter((v): v is number => v != null),
     );
     const earliest = Math.min(...pays.map((p) => p.paid_at ?? 0), Date.now() / 1000);
-    const from = new Date((earliest - 30 * 86400) * 1000).toISOString();
-    const to = new Date().toISOString();
+    const from = toRequestIso(new Date((earliest - 30 * 86400) * 1000));
+    const to = toRequestIso(new Date());
     const observed = new Set<number>();
     let page = 1;
     for (;;) {

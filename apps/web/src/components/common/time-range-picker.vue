@@ -2,7 +2,11 @@
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { computed } from "vue";
-import { recentDaysRange, type RangeValue } from "@/utils/time.ts";
+import {
+  recentDaysRange,
+  wallAsBeijingIso,
+  type RangeValue,
+} from "@/utils/time.ts";
 import type { RangeKind } from "@/composables/use-live-time-range.ts";
 
 const props = defineProps<{
@@ -62,8 +66,8 @@ function detectKind(value: RangeValue): RangeKind {
 function onChange(dates: Dayjs[] | null) {
   if (!dates || dates.length !== 2 || !dates[0] || !dates[1]) return;
   const value = {
-    from: dates[0].toISOString(),
-    to: dates[1].toISOString(),
+    from: wallAsBeijingIso(dates[0]),
+    to: wallAsBeijingIso(dates[1]),
   };
   emit("update:modelValue", value);
   emit("change", value, detectKind(value));
@@ -74,8 +78,9 @@ function onChange(dates: Dayjs[] | null) {
   <a-range-picker
     :value="pickerValue"
     :presets="presets"
-    format="YYYY-MM-DD"
-    :placeholder="['开始日期', '结束日期']"
+    format="YYYY-MM-DD HH:mm:ss"
+    :placeholder="['开始时间', '结束时间']"
+    show-time
     @change="onChange"
   />
 </template>

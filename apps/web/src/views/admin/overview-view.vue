@@ -17,7 +17,7 @@ import {
   type RangeValue,
 } from "@/composables/use-live-time-range.ts";
 import { useAdminOverview, useEngine, usePayments } from "@/queries/admin.ts";
-import { formatMinute } from "@/utils/time.ts";
+import { formatMinute, toRequestIso } from "@/utils/time.ts";
 import { formatInt } from "@/utils/format.ts";
 
 const router = useRouter();
@@ -40,10 +40,10 @@ const extraPresets = computed(() => {
     .filter((p) => p.kind === "subscription" && p.period_start != null)
     .map((p) => ({
       label: `订阅 #${p.subscription_id ?? p.id} 期间`,
-      from: new Date((p.period_start ?? 0) * 1000).toISOString(),
-      to: new Date(
-        (p.period_end ?? Math.floor(Date.now() / 1000)) * 1000,
-      ).toISOString(),
+      from: toRequestIso(new Date((p.period_start ?? 0) * 1000)),
+      to: toRequestIso(
+        new Date((p.period_end ?? Math.floor(Date.now() / 1000)) * 1000),
+      ),
     }))
     .slice(0, 4);
 });

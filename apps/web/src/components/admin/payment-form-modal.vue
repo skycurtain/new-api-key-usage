@@ -8,6 +8,7 @@ import dayjs from "dayjs";
 import type { PaymentItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import { useCreatePayment, useQpuLatest, useUpdatePayment } from "@/queries/admin.ts";
+import { unixToBeijingWall, wallAsBeijingIso } from "@/utils/time.ts";
 
 const props = defineProps<{
   open: boolean;
@@ -67,9 +68,12 @@ watch(
     if (ed) {
       form.kind = ed.kind;
       form.paid_amount = ed.paid_amount;
-      form.paid_at = ed.paid_at ? dayjs.unix(ed.paid_at) : null;
-      form.period_start = ed.period_start ? dayjs.unix(ed.period_start) : null;
-      form.period_end = ed.period_end ? dayjs.unix(ed.period_end) : null;
+      // 北京墙钟进控件，保存时 wallAsBeijingIso 可无损回写
+      form.paid_at = ed.paid_at != null ? unixToBeijingWall(ed.paid_at) : null;
+      form.period_start =
+        ed.period_start != null ? unixToBeijingWall(ed.period_start) : null;
+      form.period_end =
+        ed.period_end != null ? unixToBeijingWall(ed.period_end) : null;
       form.subscription_id = ed.subscription_id;
       form.remark = ed.remark;
       form.quotaMode = "quota";
@@ -91,7 +95,7 @@ watch(
 );
 
 function toIso(d: Dayjs | null): string | null {
-  return d ? d.toISOString() : null;
+  return d ? wallAsBeijingIso(d) : null;
 }
 
 async function onSubmit() {
@@ -157,6 +161,7 @@ async function onSubmit() {
     :confirm-loading="saving"
     ok-text="保存"
     cancel-text="取消"
+    :styles="{ body: { maxHeight: '62vh', overflowY: 'auto' } }"
     @update:open="emit('update:open', $event)"
     @ok="onSubmit"
   >
@@ -185,10 +190,18 @@ async function onSubmit() {
       </a-form-item>
       <template v-if="form.kind === 'subscription'">
         <a-form-item label="期间起" required>
-          <a-date-picker v-model:value="form.period_start" style="width: 100%" />
+          <a-date-picker
+            v-model:value="form.period_start"
+            show-time
+            style="width: 100%"
+          />
         </a-form-item>
         <a-form-item label="期间止（空 = 进行中）">
-          <a-date-picker v-model:value="form.period_end" style="width: 100%" />
+          <a-date-picker
+            v-model:value="form.period_end"
+            show-time
+            style="width: 100%"
+          />
         </a-form-item>
         <a-form-item label="订阅 ID" required>
           <a-input-number
