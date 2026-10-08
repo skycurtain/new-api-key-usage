@@ -20,7 +20,7 @@ export const usernameBody = z.object({ username: z.string() });
 
 export const setupBody = z.object({
   username: z.string().min(1).max(64),
-  password: z.string().min(8).max(128),
+  password: z.string().min(1).max(128),
 });
 
 export const loginBody = z.object({
@@ -30,7 +30,7 @@ export const loginBody = z.object({
 
 export const changePasswordBody = z.object({
   old_password: z.string().min(1),
-  new_password: z.string().min(8).max(128),
+  new_password: z.string().min(1).max(128),
 });
 
 export const timeRangeQuery = z.object({

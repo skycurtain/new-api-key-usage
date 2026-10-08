@@ -23,7 +23,7 @@ const successMsg = ref("");
 const canSubmit = computed(
   () =>
     form.old_password.length > 0 &&
-    form.new_password.length >= 8 &&
+    form.new_password.length > 0 &&
     form.confirm_password.length > 0,
 );
 
@@ -33,10 +33,6 @@ async function onSubmit() {
   formError.value = "";
   successMsg.value = "";
 
-  if (form.new_password.length < 8) {
-    fieldError.value.new_password = "新密码至少 8 位";
-    return;
-  }
   if (form.new_password !== form.confirm_password) {
     formError.value = "两次输入的新密码不一致";
     return;
@@ -85,7 +81,7 @@ async function onSubmit() {
         label="新密码"
         required
         :validate-status="fieldError.new_password ? 'error' : undefined"
-        :help="fieldError.new_password || '至少 8 位'"
+        :help="fieldError.new_password"
       >
         <a-input-password
           v-model:value="form.new_password"

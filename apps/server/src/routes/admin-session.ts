@@ -129,7 +129,7 @@ export function adminSessionRoutes() {
       const password = typeof body?.password === "string" ? body.password : "";
       const fields: Record<string, string> = {};
       if (!username) fields.username = "请填写用户名";
-      if (password.length < 8) fields.password = "密码至少 8 位";
+      if (!password) fields.password = "请填写密码";
       if (Object.keys(fields).length > 0) {
         return jsonError(c, 422, ERR.validation_failed(fields));
       }
@@ -274,11 +274,11 @@ export function adminSessionRoutes() {
       const body = await c.req.json().catch(() => null);
       const old_password = String(body?.old_password ?? "");
       const new_password = String(body?.new_password ?? "");
-      if (new_password.length < 8) {
+      if (!new_password) {
         return jsonError(
           c,
           422,
-          ERR.validation_failed({ new_password: "密码至少 8 位" }),
+          ERR.validation_failed({ new_password: "请填写新密码" }),
         );
       }
       const repos = c.get("repos");
