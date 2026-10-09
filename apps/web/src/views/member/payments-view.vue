@@ -47,7 +47,7 @@ const subColumns = [
   },
   { title: "期间", key: "period", width: 200 },
   { title: "额度", key: "quota", width: 160 },
-  { title: "付款", key: "paid", width: 150 },
+  { title: "付款金额 / 时间", key: "paid", width: 170 },
   { title: "备注", dataIndex: "remark", key: "remark", width: 140, ellipsis: true },
 ];
 

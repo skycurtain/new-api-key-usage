@@ -60,7 +60,7 @@ const subColumns = [
   { title: "订阅 ID", dataIndex: "subscription_id", key: "subscription_id", width: 100 },
   { title: "期间", key: "period", width: 200 },
   { title: "额度", key: "quota", width: 160 },
-  { title: "付款", key: "paid", width: 140 },
+  { title: "付款金额 / 时间", key: "paid", width: 170 },
   { title: "备注", key: "remark" },
   { title: "登记", key: "created_at", width: 150 },
   { title: "操作", key: "actions", width: 120 },
