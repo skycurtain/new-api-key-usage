@@ -241,3 +241,76 @@ export async function fetchPlatformSubscriptions(
     clearTimeout(timer);
   }
 }
+
+/** 平台充值单（GET /api/user/topup/self 单页） */
+export interface PlatformTopup {
+  id: number;
+  user_id?: number;
+  amount: number;
+  money: number;
+  trade_no?: string;
+  payment_method?: string;
+  payment_provider?: string;
+  create_time?: number;
+  complete_time?: number;
+  status?: string;
+}
+
+/** 用控制台 access_token 分页拉充值单（仅 p / page_size，无时间参数） */
+export async function fetchPlatformTopups(
+  baseUrl: string,
+  accessToken: string,
+  page = 1,
+  pageSize = 10,
+  timeoutMs = 8_000,
+): Promise<
+  UpstreamResult<{
+    items: PlatformTopup[];
+    total: number;
+    page: number;
+    page_size: number;
+  }>
+> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const full = `${joinUrl(baseUrl, "/api/user/topup/self")}?p=${page}&page_size=${pageSize}`;
+    const res = await fetch(full, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+      signal: ac.signal,
+    });
+    if (res.status === 401) return { ok: false, kind: "rejected" };
+    if (!res.ok) return { ok: false, kind: "http", status: res.status };
+    const body = (await res.json()) as {
+      code?: boolean | number;
+      success?: boolean;
+      data?: {
+        page?: number;
+        page_size?: number;
+        total?: number;
+        items?: PlatformTopup[];
+      };
+    };
+    if (body.code === false || body.success === false) {
+      return { ok: false, kind: "rejected" };
+    }
+    const data = body.data ?? {};
+    return {
+      ok: true,
+      data: {
+        items: data.items ?? [],
+        total: data.total ?? 0,
+        page: data.page ?? page,
+        page_size: data.page_size ?? pageSize,
+      },
+    };
+  } catch {
+    return { ok: false, kind: "unreachable" };
+  } finally {
+    clearTimeout(timer);
+  }
+}

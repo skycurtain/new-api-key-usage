@@ -11,7 +11,6 @@ export type Quota = number;
 export type QuotaUsd = string;
 
 export type BillingSource = "subscription" | "wallet";
-export type PaymentKind = "subscription" | "topup";
 export type KeyStatus = "active" | "disabled";
 export type MemberStatus = "active" | "disabled";
 
@@ -57,17 +56,35 @@ export interface KeyItem {
   expires_at: UnixSec | null;
 }
 
-export interface PaymentItem {
+/** 订阅权益登记 */
+export interface SubscriptionItem {
   id: number;
-  kind: PaymentKind;
-  paid_at: UnixSec;
-  paid_amount: PaidAmount;
-  remark: string;
-  period_start: UnixSec | null;
+  subscription_id: number;
+  period_start: UnixSec;
   period_end: UnixSec | null;
-  subscription_id: number | null;
-  quota_granted: number | null;
+  quota_granted: Quota;
   quota_usd: QuotaUsd;
+  paid_amount: PaidAmount | null;
+  paid_at: UnixSec | null;
+  remark: string;
+  created_at: UnixSec;
+}
+
+/** 充值入账（对齐上游充值单；无 quota_granted 入库列） */
+export interface TopupItem {
+  id: number;
+  upstream_id: number | null;
+  amount: number;
+  money: PaidAmount;
+  trade_no: string | null;
+  payment_method: string | null;
+  payment_provider: string | null;
+  status: string | null;
+  paid_at: UnixSec;
+  quota_derived: Quota;
+  quota_usd: QuotaUsd;
+  remark: string;
+  created_at: UnixSec;
 }
 
 export interface MemberItem {

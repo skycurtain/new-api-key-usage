@@ -130,17 +130,33 @@ export const memberMe = z.object({
   name: z.string(),
 });
 
-export const paymentItem = z.object({
+export const subscriptionItem = z.object({
   id: z.number().int(),
-  kind: z.enum(["subscription", "topup"]),
-  paid_at: z.number().int(),
-  paid_amount: z.number(),
-  remark: z.string(),
-  period_start: z.number().int().nullable(),
+  subscription_id: z.number().int(),
+  period_start: z.number().int(),
   period_end: z.number().int().nullable(),
-  subscription_id: z.number().int().nullable(),
-  quota_granted: z.number().int().nullable(),
+  quota_granted: z.number().int(),
   quota_usd: z.string(),
+  paid_amount: z.number().nullable(),
+  paid_at: z.number().int().nullable(),
+  remark: z.string(),
+  created_at: z.number().int(),
+});
+
+export const topupItem = z.object({
+  id: z.number().int(),
+  upstream_id: z.number().int().nullable(),
+  amount: z.number(),
+  money: z.number(),
+  trade_no: z.string().nullable(),
+  payment_method: z.string().nullable(),
+  payment_provider: z.string().nullable(),
+  status: z.string().nullable(),
+  paid_at: z.number().int(),
+  quota_derived: z.number().int(),
+  quota_usd: z.string(),
+  remark: z.string(),
+  created_at: z.number().int(),
 });
 
 export const engineStatus = z.object({
@@ -188,45 +204,32 @@ export const memberOverview = z.object({
       usage: usageTotals,
     }),
   ),
-  payments: z.array(z.looseObject({ id: z.number().int() })),
+  subscriptions: z.array(subscriptionItem),
+  topups: z.array(topupItem),
 });
 
-export const createPaymentBody = z
+export const createSubscriptionBody = z
   .object({
-    kind: z.enum(["subscription", "topup"]),
-    paid_at: z.string().min(1),
-    paid_amount: z.number(),
-    remark: z.string().default(""),
-    period_start: z.string().min(1).nullable().optional(),
+    subscription_id: z.number().int().positive(),
+    period_start: z.string().min(1),
     period_end: z.string().min(1).nullable().optional(),
-    subscription_id: z.number().int().positive().nullable().optional(),
-    quota_granted: z.number().int().nullable().optional(),
-  })
-  .superRefine((val, ctx) => {
-    if (val.kind === "subscription") {
-      if (!val.period_start) {
-        ctx.addIssue({
-          code: "custom",
-          message: "订阅必须填写期间起点",
-          path: ["period_start"],
-        });
-      }
-      if (val.subscription_id == null) {
-        ctx.addIssue({
-          code: "custom",
-          message: "订阅必须填写订阅编号",
-          path: ["subscription_id"],
-        });
-      }
-    }
-    if (val.quota_granted == null) {
-      ctx.addIssue({
-        code: "custom",
-        message: "必须填写本笔额度",
-        path: ["quota_granted"],
-      });
-    }
+    quota_granted: z.number().int().positive(),
+    paid_amount: z.number().nullable().optional(),
+    paid_at: z.string().min(1).nullable().optional(),
+    remark: z.string().default(""),
   });
+
+export const createTopupBody = z.object({
+  upstream_id: z.number().int().nullable().optional(),
+  amount: z.number().positive(),
+  money: z.number().positive(),
+  trade_no: z.string().nullable().optional(),
+  payment_method: z.string().nullable().optional(),
+  payment_provider: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  paid_at: z.string().min(1),
+  remark: z.string().default(""),
+});
 
 export {
   setupBody as setupBodySchema,
@@ -236,7 +239,10 @@ export {
   patchKeyBody as patchKeyBodySchema,
   createMemberBody as createMemberBodySchema,
   patchMemberBody as patchMemberBodySchema,
-  createPaymentBody as createPaymentBodySchema,
+  createSubscriptionBody as createSubscriptionBodySchema,
+  createTopupBody as createTopupBodySchema,
+  subscriptionItem as subscriptionItemSchema,
+  topupItem as topupItemSchema,
   timeRangeQuery as timeRangeQuerySchema,
   pageQuery as pageQuerySchema,
 };

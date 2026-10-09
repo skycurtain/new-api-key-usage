@@ -117,20 +117,57 @@ export const usageLogs = pgTable(
   ],
 );
 
-export const payments = pgTable("payments", {
+/** 订阅权益登记（原 payments.kind=subscription） */
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    subscription_id: bigint("subscription_id", { mode: "number" }).notNull().unique(),
+    period_start: timestamp("period_start", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    period_end: timestamp("period_end", { withTimezone: true, mode: "date" }),
+    quota_granted: bigint("quota_granted", { mode: "number" }).notNull(),
+    paid_amount: numeric("paid_amount", {
+      precision: 18,
+      scale: 2,
+      mode: "number",
+    }),
+    paid_at: timestamp("paid_at", { withTimezone: true, mode: "date" }),
+    remark: text("remark").notNull().default(""),
+    created_at: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("subscriptions_period_idx").on(t.period_start, t.period_end)],
+);
+
+/** 充值入账事件（原 payments.kind=topup；无 quota_granted 列） */
+export const topups = pgTable("topups", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-  kind: text("kind").notNull(),
-  paid_at: timestamp("paid_at", { withTimezone: true, mode: "date" }).notNull(),
-  paid_amount: numeric("paid_amount", {
+  upstream_id: bigint("upstream_id", { mode: "number" }),
+  amount: numeric("amount", { precision: 18, scale: 6, mode: "number" }).notNull(),
+  money: numeric("money", {
     precision: 18,
     scale: 2,
     mode: "number",
   }).notNull(),
+  trade_no: text("trade_no"),
+  payment_method: text("payment_method"),
+  payment_provider: text("payment_provider"),
+  status: text("status"),
+  paid_at: timestamp("paid_at", { withTimezone: true, mode: "date" }).notNull(),
   remark: text("remark").notNull().default(""),
-  period_start: timestamp("period_start", { withTimezone: true, mode: "date" }),
-  period_end: timestamp("period_end", { withTimezone: true, mode: "date" }),
-  subscription_id: bigint("subscription_id", { mode: "number" }),
-  quota_granted: bigint("quota_granted", { mode: "number" }),
+  created_at: timestamp("created_at", {
+    withTimezone: true,
+    mode: "date",
+  })
+    .notNull()
+    .defaultNow(),
 });
 
 export const qpuHistory = pgTable("qpu_history", {
@@ -207,7 +244,8 @@ export const engineStatus = pgTable("engine_status", {
 export type MemberRow = typeof members.$inferSelect;
 export type ApiKeyRow = typeof apiKeys.$inferSelect;
 export type UsageLogRow = typeof usageLogs.$inferSelect;
-export type PaymentRow = typeof payments.$inferSelect;
+export type SubscriptionRow = typeof subscriptions.$inferSelect;
+export type TopupRow = typeof topups.$inferSelect;
 export type QpuHistoryRow = typeof qpuHistory.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;

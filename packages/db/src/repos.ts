@@ -4,17 +4,19 @@ import {
   auditLogs,
   engineStatus,
   members,
-  payments,
+  subscriptions,
   qpuHistory,
   sessions,
+  topups,
   usageLogs,
   users,
   type ApiKeyRow,
   type AuditLogRow,
   type EngineStatusRow,
   type MemberRow,
-  type PaymentRow,
+  type SubscriptionRow,
   type SessionRow,
+  type TopupRow,
   type UsageLogRow,
   type UserRow,
 } from "./schema.ts";
@@ -384,41 +386,87 @@ export function createRepos(db: Db) {
       },
     },
 
-    payments: {
-      async listAll(): Promise<PaymentRow[]> {
-        return db.select().from(payments).orderBy(desc(payments.paid_at));
+    subscriptions: {
+      async listAll(): Promise<SubscriptionRow[]> {
+        return db
+          .select()
+          .from(subscriptions)
+          .orderBy(desc(subscriptions.period_start));
       },
-      async findById(id: number): Promise<PaymentRow | null> {
+      async findById(id: number): Promise<SubscriptionRow | null> {
         const rows = await db
           .select()
-          .from(payments)
-          .where(eq(payments.id, id))
+          .from(subscriptions)
+          .where(eq(subscriptions.id, id))
           .limit(1);
         return rows[0] ?? null;
       },
-      async insert(values: {
-        kind: string;
-        paid_at: Date;
-        paid_amount: number;
-        remark: string;
-        period_start: Date | null;
-        period_end: Date | null;
-        subscription_id: number | null;
-        quota_granted: number | null;
-      }): Promise<PaymentRow> {
-        const [row] = await db.insert(payments).values(values).returning();
+      async findBySubscriptionId(
+        subscriptionId: number,
+      ): Promise<SubscriptionRow | null> {
+        const rows = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.subscription_id, subscriptionId))
+          .limit(1);
+        return rows[0] ?? null;
+      },
+      async insert(
+        values: typeof subscriptions.$inferInsert,
+      ): Promise<SubscriptionRow> {
+        const [row] = await db.insert(subscriptions).values(values).returning();
         return row!;
       },
-      async update(id: number, patch: Partial<typeof payments.$inferInsert>) {
+      async update(
+        id: number,
+        patch: Partial<typeof subscriptions.$inferInsert>,
+      ) {
         const [row] = await db
-          .update(payments)
+          .update(subscriptions)
           .set(patch)
-          .where(eq(payments.id, id))
+          .where(eq(subscriptions.id, id))
           .returning();
         return row!;
       },
       async remove(id: number): Promise<void> {
-        await db.delete(payments).where(eq(payments.id, id));
+        await db.delete(subscriptions).where(eq(subscriptions.id, id));
+      },
+    },
+
+    topups: {
+      async listAll(): Promise<TopupRow[]> {
+        return db.select().from(topups).orderBy(desc(topups.paid_at));
+      },
+      async findById(id: number): Promise<TopupRow | null> {
+        const rows = await db
+          .select()
+          .from(topups)
+          .where(eq(topups.id, id))
+          .limit(1);
+        return rows[0] ?? null;
+      },
+      async findByUpstreamId(upstreamId: number): Promise<TopupRow | null> {
+        const rows = await db
+          .select()
+          .from(topups)
+          .where(eq(topups.upstream_id, upstreamId))
+          .limit(1);
+        return rows[0] ?? null;
+      },
+      async insert(values: typeof topups.$inferInsert): Promise<TopupRow> {
+        const [row] = await db.insert(topups).values(values).returning();
+        return row!;
+      },
+      async update(id: number, patch: Partial<typeof topups.$inferInsert>) {
+        const [row] = await db
+          .update(topups)
+          .set(patch)
+          .where(eq(topups.id, id))
+          .returning();
+        return row!;
+      },
+      async remove(id: number): Promise<void> {
+        await db.delete(topups).where(eq(topups.id, id));
       },
     },
 

@@ -27,6 +27,9 @@ export const ERR = {
     errorBody("invalid_credentials", "用户名或密码错误"),
   session_expired: () =>
     errorBody("session_expired", "会话已过期，请重新登录"),
+  /** 上游控制台 token 失效——**不是**管理端会话，禁止走 401 登出 */
+  platform_token_invalid: () =>
+    errorBody("platform_token_invalid", "平台登录已失效，请重新登录上游账号"),
   already_initialized: () =>
     errorBody("already_initialized", "系统已初始化，无法重复引导"),
   key_already_registered: (key_id: number) =>
