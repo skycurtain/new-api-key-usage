@@ -2,11 +2,12 @@
 /**
  * 全员总览（交互设计-全员总览）：健康带 · 时间范围 · 按成员 · 按 key
  */
-import { computed, h, ref } from "vue";
+import { computed, h } from "vue";
 import { Tooltip } from "antdv-next";
 import { QuestionCircleOutlined } from "@antdv-next/icons";
 import { useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import SourceBar from "@/components/common/source-bar.vue";
@@ -217,6 +218,10 @@ const keyColumns = [
     <!-- 按成员 -->
     <section class="overview-block">
       <h2 class="overview-block__title">按成员汇总</h2>
+      <TableRefresh
+        :loading="overviewQuery.isFetching.value"
+        @refresh="() => overviewQuery.refetch()"
+      />
       <a-empty
         v-if="!loading && byMember.length === 0"
         description="本时段内没有任何消费调用，因此没有成员用量可汇总"

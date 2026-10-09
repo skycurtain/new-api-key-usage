@@ -9,6 +9,7 @@ import { Tooltip } from "antdv-next";
 import { QuestionCircleOutlined } from "@antdv-next/icons";
 import { useRoute, useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import { useMemberRange } from "@/composables/use-member-range.ts";
@@ -275,6 +276,11 @@ watch(
       />
     </div>
 
+    <TableRefresh
+      :loading="logsQuery.isFetching.value"
+      @refresh="() => logsQuery.refetch()"
+    />
+
     <a-alert
       v-if="logsQuery.isError.value"
       type="error"
@@ -457,7 +463,7 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .member-logs__box {

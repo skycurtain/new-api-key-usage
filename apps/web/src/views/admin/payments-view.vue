@@ -9,6 +9,7 @@ import type { ApiError } from "@/api/http.ts";
 import { fetchLogs } from "@/api/admin/logs.ts";
 import { useRoute, useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import PaymentFormModal from "@/components/admin/payment-form-modal.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import {
@@ -215,6 +216,10 @@ watch(
     </a-alert>
 
     <template v-if="tab === 'subs'">
+      <TableRefresh
+        :loading="subsQuery.isFetching.value"
+        @refresh="() => subsQuery.refetch()"
+      />
       <a-empty
         v-if="!subsQuery.isPending.value && subRows.length === 0"
         description="还没有订阅登记——从平台选用或手工登记"
@@ -272,6 +277,10 @@ watch(
     </template>
 
     <template v-else>
+      <TableRefresh
+        :loading="topupsQuery.isFetching.value"
+        @refresh="() => topupsQuery.refetch()"
+      />
       <a-empty
         v-if="!topupsQuery.isPending.value && topRows.length === 0"
         description="还没有充值登记"

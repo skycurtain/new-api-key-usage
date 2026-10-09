@@ -6,6 +6,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { LogItem } from "@new-api-key-usage/core";
 import { useRoute, useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import { useLiveTimeRange } from "@/composables/use-live-time-range.ts";
@@ -271,6 +272,11 @@ onUnmounted(() => {
         placeholder="类型"
       />
     </div>
+
+    <TableRefresh
+      :loading="logsQuery.isFetching.value"
+      @refresh="() => logsQuery.refetch()"
+    />
 
     <a-empty
       v-if="!logsQuery.isPending.value && rows.length === 0"

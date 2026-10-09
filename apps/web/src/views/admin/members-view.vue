@@ -12,6 +12,7 @@ const router = useRouter();
 import type { MemberItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import MemberTokenModal from "@/components/admin/member-token-modal.vue";
 import {
   useCreateMember,
@@ -194,6 +195,11 @@ async function onToggle(record: MemberItem) {
         placeholder="状态"
       />
     </div>
+
+    <TableRefresh
+      :loading="membersQuery.isFetching.value"
+      @refresh="() => membersQuery.refetch()"
+    />
 
     <a-empty
       v-if="!membersQuery.isPending.value && rows.length === 0"

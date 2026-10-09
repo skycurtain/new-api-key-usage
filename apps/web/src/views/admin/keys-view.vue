@@ -9,6 +9,7 @@ import { useRoute, useRouter } from "vue-router";
 import type { KeyItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import RegisterKeyModal from "@/components/admin/register-key-modal.vue";
 import { useEngine, useKeys, useMembers, usePatchKey } from "@/queries/admin.ts";
 import { formatInt } from "@/utils/format.ts";
@@ -229,6 +230,11 @@ function onRowClass(record: KeyItem) {
         <a-checkbox v-model:checked="filterRecentFailed">最近轮次失败</a-checkbox>
       </a-space>
     </div>
+
+    <TableRefresh
+      :loading="keysQuery.isFetching.value"
+      @refresh="() => keysQuery.refetch()"
+    />
 
     <a-empty
       v-if="!keysQuery.isPending.value && rows.length === 0"

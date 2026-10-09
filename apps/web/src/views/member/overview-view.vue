@@ -5,6 +5,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import SourceBar from "@/components/common/source-bar.vue";
 import QuotaText from "@/components/common/quota-text.vue";
@@ -131,6 +132,10 @@ const keyColumns = [
 
       <section class="mv-block">
         <h2 class="mv-block__title">我的 Key</h2>
+        <TableRefresh
+          :loading="overviewQuery.isFetching.value"
+          @refresh="() => overviewQuery.refetch()"
+        />
         <a-table
           :columns="keyColumns"
           :data-source="keys"

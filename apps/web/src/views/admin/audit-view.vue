@@ -5,6 +5,7 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import { useAuditLogs } from "@/queries/admin.ts";
 import { formatDateTime, recentDaysRange } from "@/utils/time.ts";
@@ -87,6 +88,11 @@ onUnmounted(() => {
         />
       </template>
     </PageHeader>
+
+    <TableRefresh
+      :loading="auditQuery.isFetching.value"
+      @refresh="() => auditQuery.refetch()"
+    />
 
     <div ref="boxRef" class="audit__box">
       <a-table

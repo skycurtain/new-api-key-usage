@@ -4,6 +4,7 @@
  */
 import { computed } from "vue";
 import PageHeader from "@/components/common/page-header.vue";
+import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import { useMemberRange } from "@/composables/use-member-range.ts";
@@ -111,6 +112,10 @@ const topColumns = [
     />
     <template v-else>
       <h3 class="mv-sec">订阅</h3>
+      <TableRefresh
+        :loading="overviewQuery.isFetching.value"
+        @refresh="() => overviewQuery.refetch()"
+      />
       <a-empty v-if="subs.length === 0" description="暂无订阅登记" />
       <a-table
         v-else
