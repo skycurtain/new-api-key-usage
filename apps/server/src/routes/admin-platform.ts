@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   ERR,
   fetchPlatformSubscriptions,
+  fetchPlatformTopups,
   platformLogin,
 } from "@new-api-key-usage/core";
 import { jsonError, requireAdminSession, type AppVars } from "../middleware.ts";
@@ -131,11 +132,79 @@ export function adminPlatformRoutes() {
       const subs = await fetchPlatformSubscriptions(c.get("newapiBase"), token);
       if (!subs.ok) {
         if (subs.kind === "rejected") {
-          return jsonError(c, 401, ERR.session_expired());
+          // 上游 token 失效 ≠ 管理端会话过期：绝不能回 401（前端会误登出）
+          return jsonError(c, 422, ERR.platform_token_invalid());
         }
         return jsonError(c, 502, ERR.upstream_unreachable());
       }
       return c.json({ subscriptions: subs.data }, 200);
+    },
+  );
+
+  r.openapi(
+    createRoute({
+      method: "post",
+      path: "/platform/topups",
+      summary: "分页拉取充值单（登记辅助）",
+      tags: ["支付"],
+      security: [{ adminSession: [] }],
+      request: {
+        body: {
+          content: {
+            "application/json": {
+              schema: listBody.extend({
+                page: z.number().int().positive().optional(),
+                page_size: z.number().int().positive().max(50).optional(),
+              }),
+            },
+          },
+          required: true,
+        },
+      },
+      responses: {
+        200: {
+          description: "topups page",
+          content: {
+            "application/json": {
+              schema: z.object({
+                items: z.array(z.looseObject({ id: z.number().int() })),
+                total: z.number().int(),
+                page: z.number().int(),
+                page_size: z.number().int(),
+              }),
+            },
+          },
+        },
+        401: err401,
+        422: err422,
+        502: err502,
+      },
+    }),
+    async (c) => {
+      const body = await c.req.json().catch(() => null);
+      const token = String(body?.access_token ?? "");
+      if (!token) {
+        return jsonError(
+          c,
+          422,
+          ERR.validation_failed({ access_token: "缺少 access_token" }),
+        );
+      }
+      const page = Number(body?.page ?? 1) || 1;
+      const pageSize = Math.min(50, Number(body?.page_size ?? 10) || 10);
+      const tops = await fetchPlatformTopups(
+        c.get("newapiBase"),
+        token,
+        page,
+        pageSize,
+      );
+      if (!tops.ok) {
+        if (tops.kind === "rejected") {
+          return jsonError(c, 422, ERR.platform_token_invalid());
+        }
+        return jsonError(c, 502, ERR.upstream_unreachable());
+      }
+      return c.json(tops.data, 200);
     },
   );
 

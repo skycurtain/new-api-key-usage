@@ -6,7 +6,6 @@ import {
   usageRowPrecise,
   toUnixSec,
   type LogItem,
-  type PaymentItem,
 } from "@new-api-key-usage/core";
 import {
   jsonError,
@@ -19,7 +18,6 @@ import {
   logPageSchema,
   memberMeSchema,
   memberOverviewSchema,
-  paymentItemSchema,
 } from "../api-schemas.ts";
 import { z } from "zod";
 
@@ -161,42 +159,55 @@ export function memberViewRoutes() {
         usage: sumUsage(v.rows, timeline),
       }));
 
-      // 「该时段涉及」支付：订阅 = 日志出现过的 subscription_id ∪ 进行中；充值 = paid_at ∈ [from,to)
-      const paymentRows = await repos.payments.listAll();
+      // 「该时段涉及」：订阅 = 日志出现过的 subscription_id ∪ 进行中；充值 = paid_at ∈ [from,to)
+      const { quotaToUsdStr, qpuAt } = await import("@new-api-key-usage/core");
+      const subRows = await repos.subscriptions.listAll();
       const usedSubIds = new Set(
         rows.map((x) => x.subscription_id).filter((v): v is number => v != null),
       );
-      const payments: PaymentItem[] = [];
-      const { quotaToUsdStr, qpuAt } = await import("@new-api-key-usage/core");
-      for (const p of paymentRows) {
-        const inRange = p.paid_at >= range.from && p.paid_at < range.to;
+      const subscriptionsOut = [];
+      for (const s of subRows) {
         const ongoing =
-          p.kind === "subscription" &&
-          (p.period_end == null ||
-            p.period_end > new Date() ||
-            (p.period_start != null &&
-              p.period_start <= range.to &&
-              (p.period_end ?? new Date()) >= range.from));
-        const involved =
-          p.kind === "topup"
-            ? inRange
-            : usedSubIds.has(p.subscription_id ?? -1) || ongoing;
+          s.period_end == null ||
+          s.period_end > new Date() ||
+          (s.period_start <= range.to &&
+            (s.period_end ?? new Date()) >= range.from);
+        const involved = usedSubIds.has(s.subscription_id) || ongoing;
         if (!involved) continue;
-        const qpu = qpuAt(p.paid_at, timeline);
-        payments.push({
-          id: p.id,
-          kind: p.kind as PaymentItem["kind"],
-          paid_at: toUnixSec(p.paid_at)!,
-          paid_amount: p.paid_amount,
-          remark: p.remark,
-          period_start: toUnixSec(p.period_start),
-          period_end: toUnixSec(p.period_end),
-          subscription_id: p.subscription_id,
-          quota_granted: p.quota_granted,
-          quota_usd:
-            p.quota_granted != null
-              ? quotaToUsdStr(p.quota_granted, qpu)
-              : "0.00",
+        const qpu = qpuAt(s.paid_at ?? s.created_at, timeline);
+        subscriptionsOut.push({
+          id: s.id,
+          subscription_id: s.subscription_id,
+          period_start: toUnixSec(s.period_start)!,
+          period_end: toUnixSec(s.period_end),
+          quota_granted: s.quota_granted,
+          quota_usd: quotaToUsdStr(s.quota_granted, qpu),
+          paid_amount: s.paid_amount,
+          paid_at: toUnixSec(s.paid_at),
+          remark: s.remark,
+          created_at: toUnixSec(s.created_at)!,
+        });
+      }
+      const topupRows = await repos.topups.listAll();
+      const topupsOut = [];
+      for (const t of topupRows) {
+        if (!(t.paid_at >= range.from && t.paid_at < range.to)) continue;
+        const qpu = qpuAt(t.paid_at, timeline);
+        const quota_derived = Math.round(t.amount * qpu);
+        topupsOut.push({
+          id: t.id,
+          upstream_id: t.upstream_id,
+          amount: t.amount,
+          money: t.money,
+          trade_no: t.trade_no,
+          payment_method: t.payment_method,
+          payment_provider: t.payment_provider,
+          status: t.status,
+          paid_at: toUnixSec(t.paid_at)!,
+          quota_derived,
+          quota_usd: quotaToUsdStr(quota_derived, qpu),
+          remark: t.remark,
+          created_at: toUnixSec(t.created_at)!,
         });
       }
 
@@ -206,14 +217,8 @@ export function memberViewRoutes() {
           usage,
           by_source,
           keys,
-          payments: payments.map((p) => ({
-            ...p,
-            kind: p.kind as string,
-            period_start: p.period_start ?? null,
-            period_end: p.period_end ?? null,
-            subscription_id: p.subscription_id ?? null,
-            quota_granted: p.quota_granted ?? null,
-          })),
+          subscriptions: subscriptionsOut,
+          topups: topupsOut,
         },
         200,
       );

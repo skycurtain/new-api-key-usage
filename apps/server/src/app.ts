@@ -9,7 +9,8 @@ import { adminEngineRoutes } from "./routes/admin-engine.ts";
 import { adminKeyRoutes } from "./routes/admin-keys.ts";
 import { adminMemberRoutes } from "./routes/admin-members.ts";
 import { adminUsageRoutes } from "./routes/admin-usage.ts";
-import { adminPaymentRoutes } from "./routes/admin-payments.ts";
+import { adminSubscriptionRoutes } from "./routes/admin-subscriptions.ts";
+import { adminTopupRoutes } from "./routes/admin-topups.ts";
 import { adminAuditRoutes } from "./routes/admin-audit.ts";
 import { memberViewRoutes } from "./routes/member-view.ts";
 
@@ -117,7 +118,8 @@ export function createApp(opts: CreateAppOptions) {
   admin.route("/", adminKeyRoutes());
   admin.route("/", adminMemberRoutes());
   admin.route("/", adminUsageRoutes());
-  admin.route("/", adminPaymentRoutes());
+  admin.route("/", adminSubscriptionRoutes());
+  admin.route("/", adminTopupRoutes());
   admin.route("/", adminAuditRoutes());
   admin.route("/", adminPlatformRoutes());
   app.route("/api/admin", admin);

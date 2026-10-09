@@ -3,6 +3,8 @@ import "./zod-openapi-setup.ts";
 import {
   changePasswordBody,
   createMemberBody,
+  createSubscriptionBody,
+  createTopupBody,
   engineStatus,
   errorEnvelope,
   keyItem,
@@ -14,7 +16,8 @@ import {
   memberWithToken,
   patchKeyBody,
   patchMemberBody,
-  paymentItem,
+  subscriptionItem,
+  topupItem,
   auditLogItem,
   registerKeyBody,
   setupBody,
@@ -50,12 +53,18 @@ export const memberOverviewSchema = nameSchema(
 );
 export const logItemSchema = nameSchema(logItem, "LogItem");
 export const logPageSchema = nameSchema(logPage, "LogPage");
-export const paymentItemSchema = nameSchema(paymentItem, "PaymentItem");
+export const subscriptionItemSchema = nameSchema(
+  subscriptionItem,
+  "SubscriptionItem",
+);
+export const topupItemSchema = nameSchema(topupItem, "TopupItem");
 export const auditLogItemSchema = nameSchema(auditLogItem, "AuditLogItem");
 
 export {
   changePasswordBody as changePasswordBodySchema,
   createMemberBody as createMemberBodySchema,
+  createSubscriptionBody as createSubscriptionBodySchema,
+  createTopupBody as createTopupBodySchema,
   loginBody as loginBodySchema,
   patchKeyBody as patchKeyBodySchema,
   patchMemberBody as patchMemberBodySchema,
