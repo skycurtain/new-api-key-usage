@@ -3,8 +3,9 @@ import {
   fetchLogs,
   fetchMe,
   fetchOverview,
+  type MemberLogQuery,
 } from "@/api/member/me.ts";
-import { qk, type PageQuery, type TimeRange } from "@/api/query-keys.ts";
+import { qk, type TimeRange } from "@/api/query-keys.ts";
 
 export function useMemberMe() {
   return useQuery({
@@ -21,9 +22,10 @@ export function useMemberOverview(range: () => TimeRange) {
   });
 }
 
-export function useMemberLogs(params: () => TimeRange & PageQuery) {
+export function useMemberLogs(params: () => MemberLogQuery) {
   return useQuery({
     queryKey: () => qk.member.logs(params()),
     queryFn: () => fetchLogs(params()),
+    staleTime: 0,
   });
 }

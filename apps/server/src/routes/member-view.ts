@@ -225,7 +225,7 @@ export function memberViewRoutes() {
       method: "get",
       path: "/logs",
       summary: "日志明细（名下 key）",
-      description: "分页；恒 type=2；DTO 与管理面同构",
+      description: "分页；默认全类型（可 type 筛）；DTO 与管理面同构",
       tags: ["成员视图"],
       security: [{ memberToken: [] }],
       request: {
@@ -234,6 +234,10 @@ export function memberViewRoutes() {
           to: z.string(),
           page: z.string().optional(),
           page_size: z.string().optional(),
+          api_key_id: z.string().optional(),
+          billing_source: z.string().optional(),
+          subscription_id: z.string().optional(),
+          type: z.string().optional(),
         }),
       },
       responses: {
@@ -264,6 +268,18 @@ export function memberViewRoutes() {
         to: range.to,
         page,
         page_size,
+        api_key_id: q.api_key_id ? Number(q.api_key_id) : undefined,
+        billing_source:
+          q.billing_source === "none" ? "none" : q.billing_source || undefined,
+        subscription_id: q.subscription_id
+          ? Number(q.subscription_id)
+          : undefined,
+        type:
+          q.type === "error"
+            ? "error"
+            : q.type != null && q.type !== ""
+              ? Number(q.type)
+              : undefined,
       });
       const items: LogItem[] = rows.map((row) => {
         const { quota_usd } = usageRowPrecise(
@@ -287,6 +303,33 @@ export function memberViewRoutes() {
           is_stream: row.is_stream,
           billing_source: row.billing_source as LogItem["billing_source"],
           subscription_id: row.subscription_id,
+          raw: {
+            id: row.id,
+            api_key_id: row.api_key_id,
+            dedupe_key: row.dedupe_key,
+            billing_source: row.billing_source,
+            subscription_id: row.subscription_id,
+            user_id: row.user_id,
+            created_at: toUnixSec(row.created_at),
+            type: row.type,
+            content: row.content,
+            username: row.username,
+            token_name: row.token_name,
+            model_name: row.model_name,
+            quota: row.quota,
+            prompt_tokens: row.prompt_tokens,
+            completion_tokens: row.completion_tokens,
+            use_time: row.use_time,
+            is_stream: row.is_stream,
+            channel: row.channel,
+            channel_name: row.channel_name,
+            token_id: row.token_id,
+            group_name: row.group_name,
+            ip: row.ip,
+            request_id: row.request_id,
+            upstream_request_id: row.upstream_request_id,
+            other: row.other,
+          },
         };
       });
       return c.json({ items, total }, 200);

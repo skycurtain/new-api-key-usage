@@ -7,6 +7,7 @@ import { message } from "antdv-next";
 import type { PaymentItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import { fetchLogs } from "@/api/admin/logs.ts";
+import { useRoute, useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
 import PaymentFormModal from "@/components/admin/payment-form-modal.vue";
 import QuotaText from "@/components/common/quota-text.vue";
@@ -14,6 +15,8 @@ import { useDeletePayment, usePayments } from "@/queries/admin.ts";
 import { formatDateTime, toRequestIso } from "@/utils/time.ts";
 import { formatPaidAmount } from "@/utils/format.ts";
 
+const route = useRoute();
+const router = useRouter();
 const paymentsQuery = usePayments();
 const deletePay = useDeletePayment();
 
@@ -22,11 +25,41 @@ const editing = ref<PaymentItem | null>(null);
 const missingSubs = ref<number[]>([]);
 const checking = ref(false);
 
+const filterKind = ref<"subscription" | "topup" | null>(null);
+
+function syncFiltersFromRoute() {
+  const q = route.query;
+  filterKind.value =
+    q.kind === "subscription" || q.kind === "topup" ? q.kind : null;
+}
+
+function pushFilterQuery() {
+  const query: Record<string, string> = {};
+  if (filterKind.value) query.kind = filterKind.value;
+  void router.replace({ path: "/admin/payments", query });
+}
+
+function onKindChange(v: "subscription" | "topup" | null) {
+  filterKind.value = v;
+  pushFilterQuery();
+}
+
 const rows = computed(() => {
-  const list = [...(paymentsQuery.data.value ?? [])];
+  let list = [...(paymentsQuery.data.value ?? [])];
+  if (filterKind.value) {
+    list = list.filter((p) => p.kind === filterKind.value);
+  }
   list.sort((a, b) => (b.paid_at ?? 0) - (a.paid_at ?? 0));
   return list;
 });
+
+const hasFilter = computed(() => filterKind.value != null);
+
+syncFiltersFromRoute();
+watch(
+  () => route.query,
+  () => syncFiltersFromRoute(),
+);
 
 const columns = [
   { title: "类型", key: "kind", width: 90 },
@@ -124,6 +157,21 @@ watch(
       </template>
     </PageHeader>
 
+    <div class="payments-filters">
+      <a-select
+        :value="filterKind"
+        :options="[
+          { value: null, label: '全部类型' },
+          { value: 'subscription', label: '订阅' },
+          { value: 'topup', label: '充值' },
+        ]"
+        style="width: 120px"
+        allow-clear
+        placeholder="类型"
+        @update:value="onKindChange"
+      />
+    </div>
+
     <a-alert
       v-if="missingSubs.length"
       type="warning"
@@ -144,9 +192,9 @@ watch(
 
     <a-empty
       v-if="!paymentsQuery.isPending.value && rows.length === 0"
-      description="还没有支付记录——订阅/充值同构登记"
+      :description="hasFilter ? '没有符合筛选的支付记录' : '还没有支付记录——订阅/充值同构登记'"
     >
-      <a-button @click="onCreate">登记支付</a-button>
+      <a-button v-if="!hasFilter" @click="onCreate">登记支付</a-button>
     </a-empty>
 
     <a-table
@@ -202,6 +250,14 @@ watch(
 </template>
 
 <style scoped>
+.payments-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .pay-missing__tags {
   display: flex;
   flex-wrap: wrap;

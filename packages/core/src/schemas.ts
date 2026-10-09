@@ -65,6 +65,7 @@ export const logItem = z.object({
   is_stream: z.boolean(),
   billing_source: z.string().nullable(),
   subscription_id: z.number().int().nullable(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const logPage = z.object({

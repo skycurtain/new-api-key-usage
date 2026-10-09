@@ -20,7 +20,7 @@ async function onFinish() {
     tokenStore.setToken(model.token.trim());
     const me = await fetchMe();
     tokenStore.setMemberName(me.name);
-    void router.replace({ name: "member-home" });
+    void router.replace({ name: "member-overview" });
   } catch {
     tokenStore.clearToken();
     error.value = "令牌无效或已停用";

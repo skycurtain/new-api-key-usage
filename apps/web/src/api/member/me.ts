@@ -45,11 +45,20 @@ export async function fetchOverview(range: {
   return data;
 }
 
-export async function fetchLogs(
-  range: { from: string; to: string; page: number; page_size: number },
-): Promise<Paginated<LogItem>> {
+export type MemberLogQuery = {
+  from: string;
+  to: string;
+  page: number;
+  page_size: number;
+  api_key_id?: number;
+  billing_source?: string;
+  subscription_id?: number;
+  type?: number | "error";
+};
+
+export async function fetchLogs(query: MemberLogQuery): Promise<Paginated<LogItem>> {
   const { data } = await memberHttp.get<Paginated<LogItem>>("/logs", {
-    params: range,
+    params: query,
   });
   return data;
 }

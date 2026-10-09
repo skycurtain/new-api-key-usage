@@ -597,20 +597,39 @@ export function createRepos(db: Db) {
           );
       },
 
-      /** 成员视图明细分页（恒 type=2） */
+      /** 成员视图明细分页（可 type 筛；默认全类型） */
       async listMemberPage(params: {
         member_id: number;
         from: Date;
         to: Date;
         page: number;
         page_size: number;
+        api_key_id?: number;
+        billing_source?: string | "none";
+        subscription_id?: number;
+        type?: number | "error";
       }) {
         const conds = [
           eq(apiKeys.member_id, params.member_id),
           gte(usageLogs.created_at, params.from),
           lt(usageLogs.created_at, params.to),
-          eq(usageLogs.type, 2),
         ];
+        if (params.type === "error") {
+          conds.push(ne(usageLogs.type, 2));
+        } else if (typeof params.type === "number") {
+          conds.push(eq(usageLogs.type, params.type));
+        }
+        if (params.api_key_id != null) {
+          conds.push(eq(usageLogs.api_key_id, params.api_key_id));
+        }
+        if (params.billing_source === "none") {
+          conds.push(isNull(usageLogs.billing_source));
+        } else if (params.billing_source) {
+          conds.push(eq(usageLogs.billing_source, params.billing_source));
+        }
+        if (params.subscription_id != null) {
+          conds.push(eq(usageLogs.subscription_id, params.subscription_id));
+        }
         const totalRows = await db
           .select({ n: count() })
           .from(usageLogs)
@@ -621,6 +640,7 @@ export function createRepos(db: Db) {
           .select({
             id: usageLogs.id,
             api_key_id: usageLogs.api_key_id,
+            dedupe_key: usageLogs.dedupe_key,
             created_at: usageLogs.created_at,
             token_name: apiKeys.token_name,
             model_name: usageLogs.model_name,
@@ -633,6 +653,16 @@ export function createRepos(db: Db) {
             is_stream: usageLogs.is_stream,
             billing_source: usageLogs.billing_source,
             subscription_id: usageLogs.subscription_id,
+            user_id: usageLogs.user_id,
+            username: usageLogs.username,
+            channel: usageLogs.channel,
+            channel_name: usageLogs.channel_name,
+            token_id: usageLogs.token_id,
+            group_name: usageLogs.group_name,
+            ip: usageLogs.ip,
+            request_id: usageLogs.request_id,
+            upstream_request_id: usageLogs.upstream_request_id,
+            other: usageLogs.other,
             log_synced_at: apiKeys.log_synced_at,
           })
           .from(usageLogs)

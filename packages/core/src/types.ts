@@ -37,6 +37,8 @@ export interface LogItem {
   is_stream: boolean;
   billing_source: BillingSource | null;
   subscription_id: number | null;
+  /** 完整落库行（上游字段原貌）——「原始数据」视图 */
+  raw?: Record<string, unknown>;
 }
 
 export interface KeyItem {

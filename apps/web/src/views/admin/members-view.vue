@@ -2,7 +2,7 @@
 /**
  * 成员管理（交互设计-成员管理）：清单表 · 开户 · 令牌明文/重发 · 启停
  */
-import { computed, h, reactive, ref } from "vue";
+import { computed, h, reactive, ref, watch } from "vue";
 import { Tooltip, message } from "antdv-next";
 import { QuestionCircleOutlined } from "@antdv-next/icons";
 import { useRoute, useRouter } from "vue-router";
@@ -34,6 +34,29 @@ const tokenMemberName = ref("");
 const createForm = reactive({ name: "", remark: "" });
 const createError = ref("");
 
+const filterName = ref("");
+const filterStatus = ref<"active" | "disabled" | null>(null);
+
+function syncFiltersFromRoute() {
+  const q = route.query;
+  filterName.value = typeof q.name === "string" ? q.name : "";
+  filterStatus.value =
+    q.status === "active" || q.status === "disabled" ? q.status : null;
+}
+
+function pushFilterQuery() {
+  const query: Record<string, string> = {};
+  const mid = route.query.member_id;
+  if (typeof mid === "string" && mid) query.member_id = mid;
+  if (filterName.value.trim()) query.name = filterName.value.trim();
+  if (filterStatus.value) query.status = filterStatus.value;
+  void router.replace({ path: "/admin/members", query });
+}
+
+syncFiltersFromRoute();
+watch(() => route.query, () => syncFiltersFromRoute());
+watch([filterName, filterStatus], () => pushFilterQuery());
+
 function tipTitle(label: string, tip: string) {
   return h("span", { class: "overview-col-title" }, [
     label,
@@ -63,14 +86,33 @@ const columns = [
 ];
 
 const rows = computed(() => {
-  const list = membersQuery.data.value ?? [];
+  let list = membersQuery.data.value ?? [];
   const mid = route.query.member_id;
   if (typeof mid === "string" && mid) {
     const n = Number(mid);
-    return list.filter((m) => m.id === n);
+    list = list.filter((m) => m.id === n);
+  }
+  const name = filterName.value.trim();
+  if (name) {
+    const lower = name.toLowerCase();
+    list = list.filter(
+      (m) =>
+        m.name.toLowerCase().includes(lower) ||
+        (m.remark ?? "").toLowerCase().includes(lower),
+    );
+  }
+  if (filterStatus.value) {
+    list = list.filter((m) => m.status === filterStatus.value);
   }
   return list;
 });
+
+const hasFilter = computed(
+  () =>
+    !!filterName.value.trim() ||
+    filterStatus.value != null ||
+    (typeof route.query.member_id === "string" && !!route.query.member_id),
+);
 
 async function onCreate() {
   createError.value = "";
@@ -133,11 +175,31 @@ async function onToggle(record: MemberItem) {
       </template>
     </PageHeader>
 
+    <div class="members-filters">
+      <a-input
+        v-model:value="filterName"
+        allow-clear
+        placeholder="名称 / 备注"
+        style="width: 180px"
+      />
+      <a-select
+        v-model:value="filterStatus"
+        :options="[
+          { value: null, label: '全部状态' },
+          { value: 'active', label: '启用中' },
+          { value: 'disabled', label: '已停用' },
+        ]"
+        style="width: 120px"
+        allow-clear
+        placeholder="状态"
+      />
+    </div>
+
     <a-empty
       v-if="!membersQuery.isPending.value && rows.length === 0"
-      description="还没有成员——为每位分摊朋友开户并发放访问令牌"
+      :description="hasFilter ? '没有符合筛选的成员' : '还没有成员——为每位分摊朋友开户并发放访问令牌'"
     >
-      <a-button @click="createOpen = true">新建成员</a-button>
+      <a-button v-if="!hasFilter" @click="createOpen = true">新建成员</a-button>
     </a-empty>
 
     <a-table
@@ -230,6 +292,13 @@ async function onToggle(record: MemberItem) {
 </template>
 
 <style scoped>
+.members-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .overview-col-title {
   display: inline-flex;
   align-items: center;

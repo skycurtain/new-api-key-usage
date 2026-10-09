@@ -50,7 +50,18 @@ export const qk = {
     me: () => ["member", "me"] as const,
     overview: (range: TimeRange) =>
       ["member", "overview", range.from, range.to] as const,
-    logs: (range: TimeRange & PageQuery) =>
-      ["member", "logs", range.from, range.to, range.page, range.page_size] as const,
+    logs: (range: TimeRange & PageQuery & Record<string, unknown>) =>
+      [
+        "member",
+        "logs",
+        range.from,
+        range.to,
+        range.page,
+        range.page_size,
+        range.api_key_id ?? "",
+        range.billing_source ?? "",
+        range.subscription_id ?? "",
+        range.type ?? "",
+      ] as const,
   },
 };

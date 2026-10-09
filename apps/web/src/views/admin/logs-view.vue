@@ -78,7 +78,21 @@ const columns = [
   { title: "来源", key: "source", width: 110 },
   { title: "用量", key: "usage", width: 140 },
   { title: "Tokens", key: "tokens", width: 110 },
+  { title: "操作", key: "actions", width: 72 },
 ];
+
+const detailOpen = ref(false);
+const detailRecord = ref<LogItem | null>(null);
+
+function openDetail(record: LogItem) {
+  detailRecord.value = record;
+  detailOpen.value = true;
+}
+
+function formatRaw(record: LogItem | null): string {
+  if (!record) return "";
+  return JSON.stringify(record.raw ?? record, null, 2);
+}
 
 function syncFromRoute() {
   const q = route.query;
@@ -159,6 +173,21 @@ function goMember(memberId: number | null) {
 }
 
 let ro: ResizeObserver | null = null;
+
+function onRangeChange(
+  v: { from: string; to: string },
+  k: "recent-7" | "recent-30" | "fixed",
+) {
+  setRange(v, k);
+  page.value = 1;
+  pushQuery();
+}
+
+function onPageChange(p: number, ps: number) {
+  page.value = p;
+  pageSize.value = ps;
+}
+
 const boxRef = ref<HTMLElement | null>(null);
 const bodyY = ref(480);
 const CHROME = 96;
@@ -190,13 +219,7 @@ onUnmounted(() => {
         <span class="call-logs__label">时间范围</span>
         <TimeRangePicker
           :model-value="range"
-          @change="
-            (v, k) => {
-              setRange(v, k);
-              page = 1;
-              pushQuery();
-            }
-          "
+          @change="onRangeChange"
         />
       </template>
     </PageHeader>
@@ -266,10 +289,7 @@ onUnmounted(() => {
           showSizeChanger: true,
           pageSizeOptions: ['20', '50', '100', '200'],
           showTotal: (t: number) => `共 ${t} 条`,
-          onChange: (p: number, ps: number) => {
-            page = p;
-            pageSize = ps;
-          },
+          onChange: onPageChange,
         }"
         size="middle"
         :scroll="{ y: bodyY }"
@@ -306,9 +326,74 @@ onUnmounted(() => {
           <template v-else-if="column.key === 'tokens'">
             {{ formatInt(record.prompt_tokens) }} / {{ formatInt(record.completion_tokens) }}
           </template>
+          <template v-else-if="column.key === 'actions'">
+            <a @click="openDetail(record)">详情</a>
+          </template>
         </template>
       </a-table>
     </div>
+
+    <a-modal
+      v-model:open="detailOpen"
+      title="调用详情"
+      :footer="null"
+      width="720"
+      centered
+      :styles="{ body: { maxHeight: '70vh', overflowY: 'auto' } }"
+    >
+      <div v-if="detailRecord" class="call-logs__detail">
+        <div class="call-logs__kv">
+          <span class="call-logs__note">时间</span>
+          <span>{{ formatDateTime(detailRecord.created_at) }}</span>
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">Key / 归属</span>
+          <span>
+            {{ detailRecord.token_name }}
+            ·
+            {{ keyById.get(detailRecord.api_key_id)?.member_name ?? "未归属" }}
+          </span>
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">模型 / 类型</span>
+          <span>
+            {{ detailRecord.model_name }}
+            ·
+            {{ detailRecord.type === 2 ? "消费" : "错误" }}
+          </span>
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">用量</span>
+          <QuotaText :quota="detailRecord.quota" :quota-usd="detailRecord.quota_usd" />
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">Tokens</span>
+          <span class="call-logs__num">
+            提示 {{ formatInt(detailRecord.prompt_tokens) }} · 补全 {{ formatInt(detailRecord.completion_tokens) }}
+          </span>
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">耗时</span>
+          <span class="call-logs__num">
+            {{ detailRecord.use_time }}s · {{ detailRecord.is_stream ? "流式" : "非流式" }}
+          </span>
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">来源</span>
+          <a-tag :color="sourceBadge(detailRecord).color">
+            {{ sourceBadge(detailRecord).text }}
+          </a-tag>
+        </div>
+        <div v-if="detailRecord.content" class="call-logs__kv">
+          <span class="call-logs__note">内容</span>
+          <span class="call-logs__content">{{ detailRecord.content }}</span>
+        </div>
+        <div class="call-logs__raw">
+          <div class="call-logs__note">原始数据</div>
+          <pre class="call-logs__json">{{ formatRaw(detailRecord) }}</pre>
+        </div>
+      </div>
+    </a-modal>
   </section>
 </template>
 
@@ -336,5 +421,53 @@ onUnmounted(() => {
 .call-logs__box {
   flex: 1;
   min-height: 0;
+}
+
+.call-logs__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.call-logs__kv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.call-logs__note {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.call-logs__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.call-logs__content {
+  white-space: pre-wrap;
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}
+
+.call-logs__raw {
+  margin-top: 4px;
+}
+
+.call-logs__json {
+  margin: 4px 0 0;
+  padding: 12px;
+  max-height: 360px;
+  overflow: auto;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 20px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 </style>
