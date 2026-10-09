@@ -87,7 +87,9 @@ function onMemberLogs(memberId: number | null) {
   void router.push({
     path: "/admin/logs",
     query: {
-      ...(memberId == null ? { member_id: "unassigned" } : { member_id: String(memberId) }),
+      ...(memberId == null
+        ? { member_id: "unassigned" }
+        : { member_id: String(memberId) }),
       ...range.value,
     },
   });
@@ -144,6 +146,7 @@ const memberColumns = [
     ),
     key: "data_cutoff",
   },
+  { title: "操作", key: "actions", width: 100 },
 ];
 
 const keyColumns = [
@@ -233,7 +236,6 @@ const keyColumns = [
             <a @click="onMemberClick(record.member_id)">
               {{ record.member_name ?? "未归属" }}
             </a>
-            <a class="ov-log-link" @click="onMemberLogs(record.member_id)">查调用</a>
           </template>
           <template v-else-if="column.key === 'key_count'">
             {{ record.key_count }}
@@ -251,6 +253,14 @@ const keyColumns = [
           </template>
           <template v-else-if="column.key === 'data_cutoff'">
             {{ formatMinute(record.data_cutoff) }}
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <a-button
+              size="small"
+              @click="() => onMemberLogs(record.member_id)"
+            >
+              查调用
+            </a-button>
           </template>
         </template>
       </a-table>
