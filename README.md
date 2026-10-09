@@ -22,11 +22,13 @@
 
 | 文档 | 什么时候读 | 状态 |
 |------|-----------|------|
-| [`docs/design/需求清单.md`](docs/design/需求清单.md) | **需求权威索引与裁决档案**——R1–R15 全部定案（含裁撤与延后），R 编号体系为后续设计文档的引用锚点 | 定稿（2026-10-01） |
+| [`docs/design/需求清单.md`](docs/design/需求清单.md) | **需求权威索引与裁决档案**——R1–R15 全部定案；2026-10-09 增补支付拆表裁决 | 定稿（2026-10-09） |
 | [`docs/design/技术选型.md`](docs/design/技术选型.md) | 母体技术栈裁决（CFW 延后至功能全集实现后，仅零成本 R14 预留）：全栈 TS；Bun + Hono + Drizzle/pg；前端 Vue 3 + antdv-next；分层落地与回退；antdv-next 核验通过（§7.1） | 定稿（2026-10-02） |
 | [`docs/design/api_keys表字段设计.md`](docs/design/api_keys表字段设计.md) | 数据模型第一张表：key 登记、生命周期与成员归属 | 定稿（2026-10-01） |
 | [`docs/design/usage_logs表字段设计.md`](docs/design/usage_logs表字段设计.md) | 数据模型第二张表：日志明细、来源提列、去重与写入策略 | 同上 |
-| [`docs/design/payments表字段设计.md`](docs/design/payments表字段设计.md) | 数据模型第三张表：支付记录（订阅/充值同构，币种无关，只存事实） | 同上 |
+| [`docs/design/payments建模评估.md`](docs/design/payments建模评估.md) | 支付建模复盘：订阅权益 vs 充值入账两分；**方案 B 拆表已采纳**（2026-10-09） | 定稿（2026-10-09） |
+| [`docs/design/subscriptions表字段设计.md`](docs/design/subscriptions表字段设计.md) | 订阅权益：期间 + 额度预算 + 可选付款事实；`subscription_id` 直连日志 | 待审阅（2026-10-09） |
+| [`docs/design/topups表字段设计.md`](docs/design/topups表字段设计.md) | 充值入账事件：`paid_at` 主轴；不挂订阅 | 待审阅（2026-10-09） |
 | [`docs/design/qpu_history表字段设计.md`](docs/design/qpu_history表字段设计.md) | 数据模型第四张表：换算参数时间线（自动采样、只读） | 同上 |
 | [`docs/design/members表字段设计.md`](docs/design/members表字段设计.md) | 数据模型新增表：成员实体——key 归属、成员视图身份与按成员统计的锚点 | 定稿（2026-10-01） |
 | [`docs/design/users表字段设计.md`](docs/design/users表字段设计.md) | 数据模型新增表：管理员（单行）——登录体系的身份落点 | 同上 |
@@ -36,13 +38,13 @@
 | [`docs/design/交互设计-全员总览.md`](docs/design/交互设计-全员总览.md) | 管理面首页：健康带 + 按成员 / key 汇总 | 同上 |
 | [`docs/design/交互设计-调用日志.md`](docs/design/交互设计-调用日志.md) | 管理面调用日志：筛选、明细表、与 key/成员/总览的跳转链 | 草案（待审阅） |
 | [`docs/design/交互设计-key管理.md`](docs/design/交互设计-key管理.md) | 登记（sk-key 唯一界面露面）、启停、归属、死亡显形 | 同上 |
-| [`docs/design/交互设计-支付记录.md`](docs/design/交互设计-支付记录.md) | 订阅/充值同构表单、核对提示 | 同上 |
+| [`docs/design/交互设计-支付记录.md`](docs/design/交互设计-支付记录.md) | 支付记录页（两 Tab）：订阅权益 / 充值入账登记、核对提示 | 待审阅（2026-10-09 拆表重写） |
 | [`docs/design/交互设计-成员管理.md`](docs/design/交互设计-成员管理.md) | 开户、令牌签发/重发（明文仅一次）、停用 | 同上 |
 | [`docs/design/交互设计-审计日志.md`](docs/design/交互设计-审计日志.md) | 管理操作留痕时间线 | 同上 |
-| [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员单页世界——R12 携带形态定案（徽章 + 展开行） | 同上 |
+| [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员世界——管理端同构壳三页（总览 / 调用日志 / 支付参数）；R12：订阅徽章弹窗 + 行展开调用详情 | 定稿（2026-10-09） |
 | [`docs/design/API契约-公共约定.md`](docs/design/API契约-公共约定.md) | API 契约总纲：路由隔离与鉴权两档、错误信封、时间 / 数值 / 分页 / 命名（8 条拟定约定经审通过）——后两篇的引用锚点 | 定稿（2026-10-02） |
-| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 16 端点：引导与会话三态、引擎状态、总览聚合、key 登记四态、下钻明细、支付、成员（令牌明文仅一次）、审计；5 项裁定（经审通过）+ 4 项遗留（key 详情已裁决：实现期定） | 定稿（2026-10-02） |
-| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：令牌验证与页头、单页聚合（含支付参数卡判定）、日志明细（DTO 与管理面同构）；4 项裁定（经审通过）+ 1 项遗留 | 定稿（2026-10-02） |
+| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 18 端点：引导与会话、引擎、总览、key、日志、**订阅/充值拆资源**、成员、审计 | 待审阅（2026-10-09 §7 拆表修订） |
+| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：`/me` · `/overview`（`subscriptions`+`topups`）· `/logs` | 待审阅（2026-10-09 拆表修订） |
 | [`docs/design/同步引擎设计.md`](docs/design/同步引擎设计.md) | 独立 `apps/engine` 进程：手写 `setTimeout` 轮次、失败只记录、`engine_status` 快照供 `/api/admin/engine`；周期可配、**不为 CFW 预留** | 已实现（定稿 2026-10-05） |
 | [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 计费平台在 NewAPI 中可用的接口参考：鉴权档位、请求与返回结构、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
 

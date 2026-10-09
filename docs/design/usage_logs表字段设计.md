@@ -34,7 +34,7 @@
 | 列 | 类型 | 上游来源 | 说明 |
 |----|------|---------|------|
 | `billing_source` | text | `other.billing_source` | 计费来源：`subscription`（订阅）/ `wallet`（充值）——按来源统计的维度 |
-| `subscription_id` | bigint NULL | `other.subscription_id` | 该次消耗所属的上游订阅实例 ID——与 `payments.subscription_id` 直连；缺失时 NULL（归「未关联」分组，见 3.6） |
+| `subscription_id` | bigint NULL | `other.subscription_id` | 该次消耗所属的上游订阅实例 ID——与 `subscriptions.subscription_id` 直连；缺失时 NULL（归「未关联」分组，见 3.6） |
 
 ### 2.3 上游字段（20 个，`/api/log/token` 响应照收）
 
@@ -109,7 +109,7 @@
 ### 3.6 来源提列：`billing_source` 与 `subscription_id` 升为独立列
 
 - **为什么提列**：两者是按来源统计与日志-支付记录直连的核心维度——`other` jsonb 的键查询无法走索引（SQLite/D1 的 `json_extract` 同理），高频过滤维度应独立成列
-- **`subscription_id` 直连语义**（事实关联，非推算）：日志按 `subscription_id = payments.subscription_id` 关联支付记录；**不做期间推定**——订阅来源但该列缺失（NULL）的行归「未关联订阅」分组，统计中透明显示（正常应恒为零，非零即「缺登记」或「上游行为变化」的异常信号）
+- **`subscription_id` 直连语义**（事实关联，非推算）：日志按 `subscription_id = subscriptions.subscription_id` 关联订阅登记；**不做期间推定**——订阅来源但该列缺失（NULL）的行归「未关联订阅」分组，统计中透明显示（正常应恒为零，非零即「缺登记」或「上游行为变化」的异常信号）
 - `billing_source = wallet`（充值）的日志不挂订阅（余额扣款与订阅实例无关），`subscription_id` 为 NULL 是**正常状态**而非异常——按来源统计时它们在「充值」分组，不进「未关联订阅」分组
 - **其他键留在 `other`**：提列只针对这两个一等维度；`cache_tokens`、倍率等仍留在 jsonb，出现真实分析需求再评估（见 §5）
 

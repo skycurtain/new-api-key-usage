@@ -97,7 +97,7 @@
 
 ### 3.7 表名：`api_keys`
 
-- 理由：与页面 `/manage/api-keys` 同词对齐；`sk-` 只是 key 的实际格式前缀（不属表名职责），`api_keys` 为领域通用词，与其余各表（`usage_logs` / `payments` / `qpu_history`）风格一致
+- 理由：与页面 `/manage/api-keys` 同词对齐；`sk-` 只是 key 的实际格式前缀（不属表名职责），`api_keys` 为领域通用词，与其余各表（`usage_logs` / `subscriptions` / `topups` / `qpu_history`）风格一致
 
 ### 3.8 归属列 `member_id`：外键在本表，且可空
 

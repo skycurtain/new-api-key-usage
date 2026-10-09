@@ -15,7 +15,7 @@
 ## 项目速览（速记）
 
 - **`v1`（本分支）= 设计文档中心 + 实现主线**：实现代码与文档同分支演进（代码落点已定案），monorepo 结构（`apps/server` · `apps/web` · `packages/core` · `packages/db`）见 `docs/design/技术选型.md` §4
-- 数据模型：四张基线表（`api_keys` · `usage_logs` · `payments` · `qpu_history`）+ 三张访问主体表（`members` · `users` · `sessions`）设计见本目录，**七篇已定稿（2026-10-01，经作者逐篇审阅）**；同步架构（轮询 + `request_id` 去重 + 攒库）的动因由上游物理约束决定，架构结论不变
+- 数据模型：基线表（`api_keys` · `usage_logs` · `subscriptions` · `topups` · `qpu_history`）+ 三张访问主体表（`members` · `users` · `sessions`）——`payments` 单表已按方案 B 拆为 `subscriptions` + `topups`（见 `docs/design/payments建模评估.md`）；同步架构（轮询 + `request_id` 去重 + 攒库）的动因由上游物理约束决定，架构结论不变
 - 需求总集与待裁决项（平台身份体系、费用分摊与账单、充值折算、多订阅、数据资产保护）见 `docs/design/需求清单.md`；交付形态已裁决（双形态并行，完整形态先行）
 - 上游约束速记：只有 sk-key、无时间过滤接口 → 轮询攒库是唯一路径（README「架构的根本动因」）
 
@@ -27,14 +27,15 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 |------|------|
 | `bun install` | 安装 / 链接 workspace 依赖（在仓库根） |
 | `bun test` | 全部测试（core 契约 + server HTTP + **集成**）；集成需 `DATABASE_URL`（compose 中的 PG），无库时自动跳过 |
-| `bun --env-file=.env scripts/seed-from-samples.ts` | 从根目录 `api*.json` 实测快照灌开发库（幂等）；验收接口口径用 |
+| `bun run db:generate` | 生成 SQL 迁移（`packages/db/drizzle/`） |
+| `bun run db:push` | 推送到本地库（开发期） |
+| `bun run db:studio` | Drizzle Studio 看库 |
 | `bun run typecheck` | 根 tsconfig 类型检查（不含 web `.vue`） |
 | `bun run dev:server` | 开发跑母体后端（hot reload） |
 | `bun run dev:engine` | 开发跑同步引擎（独立进程，读 `SYNC_*` env） |
 | `bun run dev:web` | 开发跑前端 Vite |
+| `bun run build:web` | 前端类型检查 + 产物构建 |
 | `docker compose up -d` | 起开发用 PostgreSQL |
-| `bun run --filter @new-api-key-usage/db db:generate` | 生成 SQL 迁移（`packages/db/drizzle/`） |
-| `bun run --filter @new-api-key-usage/db db:push` | 推送到本地库（开发期） |
 
 环境变量见 `.env.example`（复制为 `.env` 后填写）。
 

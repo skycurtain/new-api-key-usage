@@ -288,7 +288,7 @@ quota = ( (prompt_tokens − cache_tokens)             ← 提示 tokens（未�
 - **sk-key（`TokenAuth` / `TokenAuthReadOnly`）挂不上这些路由**——钱包页在 F12 里看到的 JSON 即 `GET /api/subscription/self`，需网页登录 Cookie/会话，不是 `Authorization: Bearer sk-…`
 - 「没有免 auth 的接口」结论仍成立；**并非漏查**，而是查询面从未对 sk-key 开放。UI 只显示过期时间，是前端展示裁剪，底层数据在上述接口里
 - 订阅 `id` 与日志 `other.subscription_id` 同体系（作者 JSON 中 `id: 44/22/6` 可与日志对账）
-- 对应设计：订阅信息由购买者手工录入（`payments表字段设计`）；登记时可粘贴 `all_subscriptions` JSON 预填（见支付表单），**不引入账号密码自动化**
+- 对应设计：订阅信息由购买者手工录入或**辅助登录选用**（`subscriptions表字段设计`；密码不落库、token 会话内）；登记时可粘贴 `all_subscriptions` JSON 预填；**不做后台账号自动同步**
 
 ### 4.4 参数被忽略的情况（实测）
 
@@ -298,6 +298,26 @@ quota = ( (prompt_tokens − cache_tokens)             ← 提示 tokens（未�
 | `/api/log/token?limit=5000` | 参数被忽略，仍返回最近 1000 条 |
 | `/api/log/token?start_timestamp=1751328000` | 参数被忽略，仍返回最近 1000 条 |
 | `/v1/dashboard/billing/usage?start_date=2025-07-01` | 参数被忽略 |
+
+### 4.5 充值记录（2026-10-09 实测）
+
+- **`GET /api/user/topup/self?p=1&page_size=10`**——分页充值单；路径属 `/api/user/*`，**预期 `UserAuth()`**（账号登录态，非 sk-key）
+- 响应 `{ data: { page, page_size, total, items }, success }`；单条字段与样本：
+
+| 字段 | 样本 | 含义 |
+|------|------|------|
+| `id` | `17` | 上游充值单 ID |
+| `user_id` | `6` | 账号 |
+| `amount` | `1` | **计费单位金额**（与「美元额度」同构，≠ 实付货币） |
+| `money` | `2.04` | **实付金额** |
+| `trade_no` | `USR6…` | 交易号 |
+| `payment_method` / `payment_provider` | `alipay` / `epay` | 渠道 |
+| `create_time` / `complete_time` | Unix 秒 | 发起 / **入账完成** |
+| `status` | `success` | 单据状态 |
+
+- **无 `quota_granted` 字段**——换得额度为派生（`amount × quota_per_unit`）；登记不固化该列（`topups表字段设计.md`）
+- **展示时刻 = `complete_time`**（平台列表即显示它）；`create_time` 仅发起时刻——设计只存一条事件时间 `paid_at` = `complete_time`
+- **辅助登录代拉**（与订阅同模式）：`UserAuth` access_token、密码不落库；**仅 `p` / `page_size` 分页、无时间参数**——前端传统分页、可翻至尽头（不设页数硬上限）；不做后台定时同步
 
 ## 5. 行为事实：写权限与 key 生命周期
 

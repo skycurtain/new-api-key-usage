@@ -1,11 +1,11 @@
 # API契约-管理面
 
-> 管理面（作者，会话档）全部端点：引导与会话、引擎状态、全员总览、key 管理、日志明细（下钻）、支付记录、成员管理、审计日志。《API契约-公共约定》（定稿）全部条款在此适用不再重述——前缀 `/api/admin`、会话 cookie 鉴权、错误信封、ISO 8601 UTC 左闭右开、`quota_usd` 后端换算、snake_case 同构。
+> 管理面（作者，会话档）全部端点：引导与会话、引擎状态、全员总览、key 管理、日志明细（下钻）、订阅权益 / 充值入账、成员管理、审计日志。《API契约-公共约定》（定稿）全部条款在此适用不再重述——前缀 `/api/admin`、会话 cookie 鉴权、错误信封、ISO 8601 UTC 左闭右开、`quota_usd` 后端换算、snake_case 同构。
 
 | 项目 | 内容 |
 |------|------|
-| 状态 | 定稿（2026-10-02） |
-| 关联 | 《API契约-公共约定》（定稿——总纲）· 八篇交互设计（定稿）· `api_keys` / `usage_logs` / `payments` / `qpu_history` / `members` 表字段设计（DTO 字段权威）· `需求清单.md` §9（访问主体模型） |
+| 状态 | 待审阅（2026-10-09 支付拆表修订——§7） |
+| 关联 | 《API契约-公共约定》（定稿——总纲）· 八篇交互设计 · `api_keys` / `usage_logs` / `subscriptions` / `topups` / `qpu_history` / `members` 表字段设计（DTO 字段权威）· `需求清单.md` §9（访问主体模型） |
 | 产出 | 端点清单、请求 / 响应字段、错误码、本稿裁定项（§10）与遗留项（§11） |
 
 ---
@@ -23,13 +23,15 @@
 | 7 | `/api/admin/keys` | GET / POST | key 清单 / 登记 |
 | 8 | `/api/admin/keys/:id` | PATCH | 启停 / 归属变更 |
 | 9 | `/api/admin/logs` | GET | 日志明细（下钻，分页） |
-| 10 | `/api/admin/payments` | GET / POST | 支付记录清单 / 登记 |
-| 11 | `/api/admin/payments/:id` | PUT / DELETE | 编辑 / 删除 |
-| 12 | `/api/admin/qpu/latest` | GET | 当前换算率（表单美元双输入用） |
-| 13 | `/api/admin/members` | GET / POST | 成员清单 / 开户（令牌明文仅一次） |
-| 14 | `/api/admin/members/:id` | PATCH | 停用 / 启用 |
-| 15 | `/api/admin/members/:id/token` | POST | 令牌重发（明文仅一次） |
-| 16 | `/api/admin/audit-logs` | GET | 审计日志（分页） |
+| 10 | `/api/admin/subscriptions` | GET / POST | 订阅权益清单 / 登记 |
+| 11 | `/api/admin/subscriptions/:id` | PUT / DELETE | 编辑 / 删除 |
+| 12 | `/api/admin/topups` | GET / POST | 充值入账清单 / 登记 |
+| 13 | `/api/admin/topups/:id` | PUT / DELETE | 编辑 / 删除 |
+| 14 | `/api/admin/qpu/latest` | GET | 当前换算率（表单美元双输入用） |
+| 15 | `/api/admin/members` | GET / POST | 成员清单 / 开户（令牌明文仅一次） |
+| 16 | `/api/admin/members/:id` | PATCH | 停用 / 启用 |
+| 17 | `/api/admin/members/:id/token` | POST | 令牌重发（明文仅一次） |
+| 18 | `/api/admin/audit-logs` | GET | 审计日志（分页） |
 
 ## 2. 引导与会话
 
@@ -168,28 +170,62 @@
 
 > **界面落点**：《交互设计-调用日志》——管理面独立查询页；总览/Key/成员筛选深链 + 行内回跳。
 
-## 7. 支付记录
+## 7. 订阅权益与充值入账
 
-### GET `/api/admin/payments` → 200 `[payment]`
+> 原 `payments` 单表已拆（`payments建模评估.md` 方案 B）：**订阅 = 权益**（期间 + 额度预算 + 可选付款事实），**充值 = 入账事件**。UI 菜单仍叫「支付记录」，API 按资源分组。
 
-全量直返（年十位数，不分页），时间倒序（后端排序）。
+### GET `/api/admin/subscriptions` → 200 `[subscription]`
+
+全量直返（年个位数，不分页），`period_start` 倒序。
 
 ```json
 {
-  "id": 3, "kind": "subscription", "paid_at": "2026-09-01T00:00:00Z",
-  "paid_amount": 170, "remark": "九月拼车",
+  "id": 3, "subscription_id": 44,
   "period_start": "2026-09-01T00:00:00Z", "period_end": "2026-10-01T00:00:00Z",
-  "subscription_id": 3, "quota_granted": 12500000, "quota_usd": "25.00"
+  "quota_granted": 12500000, "quota_usd": "25.00",
+  "paid_amount": 170, "paid_at": "2026-08-28T10:00:00Z",
+  "remark": "九月拼车", "created_at": "2026-09-02T12:00:00Z"
 }
 ```
 
-`quota_usd` 按支付时刻（`paid_at`）QPU 换算（§10 裁定 4）；`kind = topup` 行 `period_*` / `subscription_id` 为 `null`。
+- `quota_usd` 换算锚点优先级：`paid_at` → 否则 `created_at`（§10 裁定 4 修订）
+- `paid_amount` / `paid_at` 可空（付款事实未知）
 
-### POST `/api/admin/payments` → 201 `payment`
+### POST `/api/admin/subscriptions` → 201 `subscription`
 
-`kind` 分形态必填校验（`422`）：公共 `{kind, paid_at, paid_amount, remark?}`；`subscription` 追加必填 `period_start` / `subscription_id` / `quota_granted`（`period_end` 可空 = 进行中）；`topup` 追加必填 `quota_granted`。表单美元双输入为前端换算（按 `qpu/latest` 预览），落库恒原始 quota（表设计 3.6）。
+必填：`subscription_id` · `period_start` · `quota_granted`；可空：`period_end`（=进行中）· `paid_amount` · `paid_at` · `remark`。美元双输入为前端换算，落库恒原始 quota。
 
-### PUT `/api/admin/payments/:id` → 200 `payment` / DELETE → 204
+### PUT `/api/admin/subscriptions/:id` / DELETE → 204
+
+### GET `/api/admin/topups` → 200 `[topup]`
+
+全量直返，`paid_at` 倒序。对齐上游充值单；**事件时刻单列**（上游 `complete_time`），**无 `quota_granted` 入库列**：
+
+```json
+{
+  "id": 1, "upstream_id": 17,
+  "amount": 1, "money": 2.04,
+  "trade_no": "USR6NOLqTPGa1791534153",
+  "payment_method": "alipay", "payment_provider": "epay",
+  "status": "success",
+  "paid_at": "2026-10-09T12:22:56Z",
+  "quota_derived": 500000, "quota_usd": "1.00",
+  "remark": "", "created_at": "2026-10-09T13:00:00Z"
+}
+```
+
+`quota_derived` / `quota_usd` 为**派生**（`amount × qpu`，锚点 `paid_at`），不入库。
+
+### POST `/api/admin/topups` → 201 `topup`
+
+必填：`paid_at` · `amount` · `money`；可空：`upstream_id` · `trade_no` · `payment_method` · `payment_provider` · `status` · `remark`。
+
+### PUT `/api/admin/topups/:id` / DELETE → 204
+
+### 平台辅助（登录代拉，密码不入库）
+
+已有：`POST /api/admin/platform/login` · `POST /api/admin/platform/subscriptions`。  
+**新增**：`POST /api/admin/platform/topups` body `{ access_token, page, page_size }` → `{ items, total, page, page_size }`——透传 `/api/user/topup/self` **单页**；前端传统分页、可翻至尽头、无时间参数、无页数硬上限（见交互篇 §4.1）。不做后台定时同步。
 
 编辑全字段、删除有确认（前端）；改错即修，均落审计。
 
@@ -248,7 +284,7 @@
 | 域 | action 枚举 |
 |----|------------|
 | key | `key.register` / `key.enable` / `key.disable` / `key.reassign`（归属变更） |
-| payment | `payment.create` / `payment.update` / `payment.delete` |
+| payment | `subscription.create` / `subscription.update` / `subscription.delete` / `topup.create` / `topup.update` / `topup.delete`（UI 菜单「支付记录」） |
 | member | `member.create` / `member.enable` / `member.disable` / `member.token_issue`（开户自动签发）/ `member.token_reissue` |
 | account | `account.password_change` / `account.init`（系统，operator null） |
 
@@ -258,8 +294,8 @@
 
 1. **用量聚合口径仅 `type = 2`（消费行）**——usage_logs §5 待定「type 过滤策略」落定：聚合与统计只计消费行（错误行入聚合即失真）；明细查询默认全类型、可按 `type` 筛（错误排查入口）；
 2. **日志明细 `token_name` 取当前名**（联查 `api_keys`；快照名存库不出 API）——表设计 2.3 待定「展示口径」落定；
-3. **有限基数清单不分页**：`keys` / `members` / `payments` 直返全量数组；公共约定 §6 的「列表类分页」指无界列表（`logs` / `audit-logs`）；
-4. **支付记录 `quota_usd` 按支付时刻（`paid_at`）QPU 换算**——对齐「按日志时刻取值」的历史正确性原则；
+3. **有限基数清单不分页**：`keys` / `members` / `subscriptions` / `topups` 直返全量数组；公共约定 §6 的「列表类分页」指无界列表（`logs` / `audit-logs`）；
+4. **`quota_usd` 换算锚点**：充值恒 `paid_at`（= 上游 `complete_time`）；订阅优先 `paid_at`、否则 `created_at`——对齐「按日志时刻取值」的历史正确性原则；
 5. **公共约定随本稿与审阅增补四处**：状态表加 `429`（登录节流）、错误信封允许端点附机器可读附注字段（`409 key_already_registered` 附 `key_id`）、`/api` 命名空间专属接口（页面路由永不进入）、端点面向交互设计不与数据表对齐。
 
 ## 11. 遗留项（归后续立稿或作者裁决）
