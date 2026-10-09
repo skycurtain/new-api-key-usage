@@ -15,7 +15,10 @@ import { formatInt } from "@/utils/format.ts";
 
 const router = useRouter();
 const { range, onRangeChange } = useMemberRange();
-const overviewQuery = useMemberOverview(() => range.value);
+/** 看板心智：仅总览自动刷新；其它成员页不轮询 */
+const overviewQuery = useMemberOverview(() => range.value, {
+  refetchInterval: 60_000,
+});
 
 const usage = computed(() => overviewQuery.data.value?.usage);
 const bySource = computed(() => overviewQuery.data.value?.by_source ?? []);

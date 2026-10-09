@@ -6,28 +6,24 @@ export type RangeValue = { from: string; to: string };
 export type RangeKind = "recent-7" | "recent-30" | "fixed";
 
 /**
- * 成员端全局时间范围——总览 / 调用日志 / 支付参数共用（对账窗口不因切页打断）。
+ * 成员端全局时间范围——总览 / 调用日志 / 支付参数共用。
+ * 相对窗口在 setRange 时定格，避免每分钟改 key 打穿缓存；
+ * 「看板自动刷新」只属于总览页（refetchInterval），其余页按需请求。
  */
 export const useMemberRangeStore = defineStore("member-range", () => {
   const kind = ref<RangeKind>("recent-30");
+  const windowRange = ref<RangeValue>(recentDaysRange(30));
   const fixed = ref<RangeValue>(recentDaysRange(30));
-  const nowTick = ref(Date.now());
 
-  setInterval(() => {
-    nowTick.value = Date.now();
-  }, 60_000);
-
-  const range = computed<RangeValue>(() => {
-    void nowTick.value;
-    if (kind.value === "recent-7") return recentDaysRange(7);
-    if (kind.value === "recent-30") return recentDaysRange(30);
-    return fixed.value;
-  });
+  const range = computed<RangeValue>(() =>
+    kind.value === "fixed" ? fixed.value : windowRange.value,
+  );
 
   function setRange(value: RangeValue, nextKind: RangeKind) {
     kind.value = nextKind;
     if (nextKind === "fixed") fixed.value = value;
+    else windowRange.value = value;
   }
 
-  return { kind, fixed, range, setRange };
+  return { kind, range, setRange };
 });
