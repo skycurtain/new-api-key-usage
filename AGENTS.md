@@ -5,18 +5,18 @@
 ## 协作约定（长期有效）
 
 - **Git**：仅当项目作者明确说"提交 / commit"时才执行提交；`git push` 永远由项目作者手工执行，AI 绝不推送
-- **命名**：需求 / 设计 / 交互 / 技术 / 计划等**文档名**用中文（`README` / `AGENTS` / `LICENSE` 等约定俗成除外）、**目录**用英文；新文档按性质放入 `docs/design/`（我们定的方案与决策）或 `docs/references/`（平台可用接口参考——实证事实，不做设计决策），并同步更新 README 的「文档地图」；`docs/deprecated/` 只归档已废弃文档——**勿引用、勿作依据**（本分支暂无此目录，需要时再建）
+- **命名**：需求 / 设计 / 交互 / 技术 / 计划等**文档名**用中文（`README` / `AGENTS` / `LICENSE` 等约定俗成除外）、**目录**用英文；新文档按性质放入 `docs/design/`（我们定的方案与决策）或 `docs/references/`（平台可用接口参考——实证事实，不做设计决策），并同步更新 README 的「文档地图」；`docs/deprecated/` 只归档已废弃文档——**勿引用、勿作依据**（需要时再建）
 - **代码文件命名**：所有**目录名与文件名**一律 kebab-case（如 `time-range-picker.vue` · `admin-session.ts`）；**组件在模板中引用时用大驼峰**（`<TimeRangePicker />`）——文件名 kebab、模板标签 PascalCase
 - **文档状态**：头部表格标「状态」（草案 → 讨论中 → 待审阅 → 定稿(日期) → 已实现）；设计文档定稿后不搬家、只改状态；被取代时删除（git 历史即考古）
 - **部署**：交付物必须保证「一条命令链」可部署；**双形态并行已裁决**——完整前后端（运营方服务器）先行，Cloudflare Workers 抽取版（作者自部署）后续（见 `docs/design/需求清单.md` R13）
-- **不引入版本叙事**：不使用 v1/v2/v3 之类版本编号，不以「MVP」等标签或指称显式描述任何历史阶段；文档内容必须**自立**——不得引用、描述任何当前分支之外、可能被删除的分支内容
-- **本地不入库也不 ignore 的物料**（AI 提交时务必避开）：`api*.json`（上游实测快照）、`session-archive/`（作者主动备份的会话记录，如 `v1-设计-*.md`）——不加入 git、不写 `.gitignore`，靠提交时人工/执行者目视把关；`v1-设计-1.md` 为历史对话原档，允许保留旧术语，不作现行依据
+- **不引入版本叙事**：不使用 v1/v2/v3 之类版本编号，不以「MVP」等标签或指称显式描述任何历史阶段；文档内容必须**自立**——不得引用、描述任何当前仓库之外、可能被删除的分支或目录内容
+- **本地不入库也不 ignore 的物料**（AI 提交时务必避开）：`api*.json`（上游实测快照）、`session-archive/`（作者主动备份的会话记录）——不加入 git、不写 `.gitignore`，靠提交时人工/执行者目视把关
 
 ## 项目速览（速记）
 
-- **`v1`（本分支）= 设计文档中心 + 实现主线**：实现代码与文档同分支演进（代码落点已定案），monorepo 结构（`apps/server` · `apps/web` · `packages/core` · `packages/db`）见 `docs/design/技术选型.md` §4
-- 数据模型：基线表（`api_keys` · `usage_logs` · `subscriptions` · `topups` · `qpu_history`）+ 三张访问主体表（`members` · `users` · `sessions`）——`payments` 单表已按方案 B 拆为 `subscriptions` + `topups`（见 `docs/design/payments建模评估.md`）；同步架构（轮询 + `request_id` 去重 + 攒库）的动因由上游物理约束决定，架构结论不变
-- 需求总集与待裁决项（平台身份体系、费用分摊与账单、充值折算、多订阅、数据资产保护）见 `docs/design/需求清单.md`；交付形态已裁决（双形态并行，完整形态先行）
+- **本仓库 = 设计文档中心 + 实现主线**：实现代码与文档同仓演进，monorepo 结构（`apps/server` · `apps/engine` · `apps/web` · `packages/core` · `packages/db`）见 `docs/design/技术选型.md` §4
+- 数据模型：基线表（`api_keys` · `usage_logs` · `subscriptions` · `topups` · `qpu_history`）+ 三张访问主体表（`members` · `users` · `sessions`）——支付登记已拆为 `subscriptions` + `topups`（见 `docs/design/payments建模评估.md`）；同步架构（轮询 + `request_id` 去重 + 攒库）的动因由上游物理约束决定
+- 需求总集与裁决档案见 `docs/design/需求清单.md`；交付形态已裁决（双形态并行，完整形态先行）
 - 上游约束速记：只有 sk-key、无时间过滤接口 → 轮询攒库是唯一路径（README「架构的根本动因」）
 
 ## 命令
@@ -30,7 +30,7 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 | `bun run db:push` | 推送到本地库（开发期） |
 | `bun run db:studio` | Drizzle Studio 看库 |
 | `bun run typecheck` | 根 tsconfig 类型检查（不含 web `.vue`） |
-| `bun run dev:server` | 开发跑母体后端（hot reload） |
+| `bun run dev:server` | 开发跑后端（hot reload） |
 | `bun run dev:engine` | 开发跑同步引擎（独立进程，读 `SYNC_*` env） |
 | `bun run dev:web` | 开发跑前端 Vite |
 | `bun run build:web` | 前端类型检查 + 产物构建 |

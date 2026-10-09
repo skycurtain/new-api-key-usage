@@ -1,95 +1,125 @@
 # new-api-key-usage
 
-> 针对 NewAPI 平台的 key 用量统计工具
+> NewAPI 网关下的 key 用量统计工具（产品名 **NAKU**）
 
 定时用每个 sk-key 轮询网关日志接口，按 `request_id` 去重，攒全量日志到数据库；任意时间范围的用量查询，即一条本地聚合查询。
 
 | 项目 | 内容 |
 |------|------|
-| 当前状态 | **实现推进中**（`v1` 分支 = 文档中心 + 实现主线）——设计文档全部定稿；后端 + 同步引擎已落地；前端总览与 Key 管理已实现，其余页面进行中 |
-| 技术栈 | 全栈 TypeScript（选型定稿见 [`docs/design/技术选型.md`](docs/design/技术选型.md)）：母体 Bun + Hono + Drizzle + PostgreSQL · 前端 Vue 3 + antdv-next |
+| 当前状态 | **实现推进中**——设计文档主体定稿；后端 + 同步引擎 + 前端（管理面与成员视图）已落地；部署链与衍生形态待收尾 |
+| 技术栈 | 全栈 TypeScript（选型见 [`docs/design/技术选型.md`](docs/design/技术选型.md)）：Bun + Hono + Drizzle + PostgreSQL · 前端 Vue 3 + antdv-next |
 
-## 项目沿革
+## 这是什么
 
-| 阶段 | 形态 | 结局 |
-|------|------|------|
-| 初版方案 | Cloudflare Workers | 弃——当时运营方愿意提供服务器资源 |
-| 新版设计（当前） | **本分支，设计已收官、实现推进中** | 捡回 Cloudflare Workers（**serverless 后端**：Cron 定时轮询 + 云端数据库攒库，非初版原案复刻）作为后续衍生形态；母体完整前后端先行，CFW 延后至功能全集实现后 |
+面向 [NewAPI](https://github.com/QuantumNous/new-api) 实例的**独立计费辅助平台**：作者购买订阅额度后，创建多个 sk- API key 分发给多名使用者分摊成本。平台只提供**事实服务**——用量、来源标注、支付参数、多维统计；**不算「谁该付谁多少钱」**（分摊是人和人之间的事）。
 
-**双形态并行的直接动因**：服务器部署形态下，每次迭代都需实例运营方在服务器上手工升级，测试阶段迭代频繁而运营方无暇跟随；若部署到作者自控的 Cloudflare 账号（Workers + Pages），迭代部署权回到作者手里。
+- 名字直述用途：NewAPI 网关下按 key 查询用量（key usage）；产品展示名 NAKU
+- 全场景统一小写 kebab-case：仓库名 / 包名一致
 
-## 文档地图
+## 背景与约束
 
-| 文档 | 什么时候读 | 状态 |
-|------|-----------|------|
-| [`docs/design/需求清单.md`](docs/design/需求清单.md) | **需求权威索引与裁决档案**——R1–R15 全部定案；2026-10-09 增补支付拆表裁决 | 定稿（2026-10-09） |
-| [`docs/design/技术选型.md`](docs/design/技术选型.md) | 母体技术栈裁决（CFW 延后至功能全集实现后，仅零成本 R14 预留）：全栈 TS；Bun + Hono + Drizzle/pg；前端 Vue 3 + antdv-next；分层落地与回退；antdv-next 核验通过（§7.1） | 定稿（2026-10-02） |
-| [`docs/design/api_keys表字段设计.md`](docs/design/api_keys表字段设计.md) | 数据模型第一张表：key 登记、生命周期与成员归属 | 定稿（2026-10-01） |
-| [`docs/design/usage_logs表字段设计.md`](docs/design/usage_logs表字段设计.md) | 数据模型第二张表：日志明细、来源提列、去重与写入策略 | 同上 |
-| [`docs/design/payments建模评估.md`](docs/design/payments建模评估.md) | 支付建模复盘：订阅权益 vs 充值入账两分；**方案 B 拆表已采纳**（2026-10-09） | 定稿（2026-10-09） |
-| [`docs/design/subscriptions表字段设计.md`](docs/design/subscriptions表字段设计.md) | 订阅权益：期间 + 额度预算 + 可选付款事实；`subscription_id` 直连日志 | 待审阅（2026-10-09） |
-| [`docs/design/topups表字段设计.md`](docs/design/topups表字段设计.md) | 充值入账事件：`paid_at` 主轴；不挂订阅 | 待审阅（2026-10-09） |
-| [`docs/design/qpu_history表字段设计.md`](docs/design/qpu_history表字段设计.md) | 数据模型第四张表：换算参数时间线（自动采样、只读） | 同上 |
-| [`docs/design/members表字段设计.md`](docs/design/members表字段设计.md) | 数据模型新增表：成员实体——key 归属、成员视图身份与按成员统计的锚点 | 定稿（2026-10-01） |
-| [`docs/design/users表字段设计.md`](docs/design/users表字段设计.md) | 数据模型新增表：管理员（单行）——登录体系的身份落点 | 同上 |
-| [`docs/design/sessions表字段设计.md`](docs/design/sessions表字段设计.md) | 数据模型新增表：管理面会话——cookie 令牌的服务端对应物 | 同上 |
-| [`docs/design/交互设计-总览与共性.md`](docs/design/交互设计-总览与共性.md) | 交互设计总纲：访问拓扑、导航、跨页组件、状态与数值呈现约定 | 定稿（2026-10-01） |
-| [`docs/design/交互设计-登录与会话.md`](docs/design/交互设计-登录与会话.md) | 管理面登录页、引导页、改密、成员登录壳 | 同上 |
-| [`docs/design/交互设计-全员总览.md`](docs/design/交互设计-全员总览.md) | 管理面首页：健康带 + 按成员 / key 汇总 | 同上 |
-| [`docs/design/交互设计-调用日志.md`](docs/design/交互设计-调用日志.md) | 管理面调用日志：筛选、明细表、与 key/成员/总览的跳转链 | 草案（待审阅） |
-| [`docs/design/交互设计-key管理.md`](docs/design/交互设计-key管理.md) | 登记（sk-key 唯一界面露面）、启停、归属、死亡显形 | 同上 |
-| [`docs/design/交互设计-支付记录.md`](docs/design/交互设计-支付记录.md) | 支付记录页（两 Tab）：订阅权益 / 充值入账登记、核对提示 | 待审阅（2026-10-09 拆表重写） |
-| [`docs/design/交互设计-成员管理.md`](docs/design/交互设计-成员管理.md) | 开户、令牌签发/重发（明文仅一次）、停用 | 同上 |
-| [`docs/design/交互设计-审计日志.md`](docs/design/交互设计-审计日志.md) | 管理操作留痕时间线 | 同上 |
-| [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员世界——管理端同构壳三页（总览 / 调用日志 / 支付参数）；R12：订阅徽章弹窗 + 行展开调用详情 | 定稿（2026-10-09） |
-| [`docs/design/API契约-公共约定.md`](docs/design/API契约-公共约定.md) | API 契约总纲：路由隔离与鉴权两档、错误信封、时间 / 数值 / 分页 / 命名（8 条拟定约定经审通过）——后两篇的引用锚点 | 定稿（2026-10-02） |
-| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 18 端点：引导与会话、引擎、总览、key、日志、**订阅/充值拆资源**、成员、审计 | 待审阅（2026-10-09 §7 拆表修订） |
-| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：`/me` · `/overview`（`subscriptions`+`topups`）· `/logs` | 待审阅（2026-10-09 拆表修订） |
-| [`docs/design/同步引擎设计.md`](docs/design/同步引擎设计.md) | 独立 `apps/engine` 进程：手写 `setTimeout` 轮次、失败只记录、`engine_status` 快照供 `/api/admin/engine`；周期可配、**不为 CFW 预留** | 已实现（定稿 2026-10-05） |
-| [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 计费平台在 NewAPI 中可用的接口参考：鉴权档位、请求与返回结构、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
-
-- 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（我们定的方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）
-- 生命周期：设计文档定稿后不搬家、只改状态（草案 → 讨论中 → 待审阅 → 定稿(日期) → 已实现）；被取代时删除（git 历史即考古）
-
-## 这是什么项目
-
-- 名字直述用途：NewAPI 网关下按 key 查询用量（key usage）
-- 全场景统一小写 kebab-case：仓库名 / 包名 / 文档标题一致，无大写变体
-
-## 背景故事
-
-- 本工具源于一个真实场景：[NewAPI](https://github.com/QuantumNous/new-api)（Go + GORM 的开源 LLM 网关）实例提供订阅服务，多个使用者通过分发 API key 共享同一份订阅额度
-- 项目作者是该实例的**普通用户**：购买了订阅额度，创建多个 sk- API key 分发给多名使用者分摊使用成本——**非商业，纯成本分担**
-- 关键身份约束：项目作者**只有 sk-key，没有实例的管理员账号**。因此：
+- 真实场景：NewAPI（Go + GORM 开源 LLM 网关）实例提供订阅服务，多使用者通过分发 API key 共享订阅额度——**非商业，纯成本分担**
+- 项目作者是该实例的**普通用户**：只有 sk-key，**没有实例管理员账号**
   - 一切数据获取只能走 key 级接口（账号级接口用 sk-key 访问会 401）
-  - 部署形态已裁决为**双形态并行**：完整前后端部署在实例运营方提供的服务器上（作者不接触服务器）+ Cloudflare Workers 抽取版部署在作者自控账号（见 [`docs/design/需求清单.md`](docs/design/需求清单.md) R13）
+  - 交付形态为**双形态并行**：完整前后端部署在实例运营方提供的服务器上（作者不接触服务器）+ Cloudflare Workers 抽取版部署在作者自控账号（见 [`docs/design/需求清单.md`](docs/design/需求清单.md) R13）
 
-## 核心需求（基线摘要；完整范围见需求清单）
+**双形态并行的动因**：服务器部署形态下，每次迭代都需实例运营方手工升级；部署到作者自控的 Cloudflare 账号后，迭代部署权回到作者手里。母体完整前后端先行，Workers 抽取版延后至功能全集实现后。
 
-| # | 需求 | 说明 |
+## 核心能力
+
+| # | 能力 | 说明 |
 |---|------|------|
-| 1 | key 用量查询 | 按时间范围查模型请求日志与用量；作者的全员视角经管理面总览实现——「凭 sk-key 的开放查询」与「多 key 合并查询」机制已裁撤（见需求清单裁决记录） |
-| 2 | key 登记 | 管理通道手动登记：登记后入库并加入轮询；查看面凭已登记的 key 查询（纯只读） |
+| 1 | key 用量查询 | 按时间范围查模型请求日志与用量；作者全员视角在管理面总览，成员视角在成员视图 |
+| 2 | key 登记 | 管理通道手动登记：入库并加入轮询；生命周期为手动启停（引擎只读 `status`） |
+| 3 | 支付事实登记 | 订阅权益与充值入账分表登记；对成员完全公开透明 |
+| 4 | 多维统计 | 按成员 / key / 计费来源 / 模型的任意时段聚合 |
 
-基线刻意收缩的部分（费用分摊计算、计费周期管理、多组支持、登录页、admin 角色、会话记忆）与新增域（数据资产保护等）的完整需求盘点见 [`docs/design/需求清单.md`](docs/design/需求清单.md)。
+完整需求范围（含刻意不做的部分）见 [`docs/design/需求清单.md`](docs/design/需求清单.md)。
 
 ## 架构的根本动因：为什么必须攒数据
 
 这不是优化选项，是上游接口的物理约束决定的**唯一路径**（不随部署形态改变）：
 
 1. sk-key 可用的接口（`/api/usage/token`、`/api/log/token` 等）返回的都是**累计值**或**最近 1000 条**，没有任何接口支持时间范围过滤
-2. 真正适合算“当月用量”的接口（`/api/log/self/stat`，支持时间范围 + quota 汇总）需要账号登录态，sk-key 访问 401——这是“按时间段统计用量”无法纯客户端实现的**核心障碍**
+2. 真正适合算「当月用量」的接口（`/api/log/self/stat`，支持时间范围 + quota 汇总）需要账号登录态，sk-key 访问 401——这是「按时间段统计用量」无法纯客户端实现的**核心障碍**
 3. `/api/log/token` 硬上限 1000 条、不支持任何参数（分页 / limit / 时间过滤全被忽略）
 
-→ 结论：轮询同步 + `request_id` 去重入库 + 数据库。**部署形态可以变（运营方服务器 / Cloudflare Workers），攒库架构不变。**上游接口完整实证（含源码出处）见 [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md)。
+→ 结论：轮询同步 + `request_id` 去重入库 + 数据库。**部署形态可以变，攒库架构不变。** 上游接口完整实证（含源码出处）见 [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md)。
+
+## 技术栈与结构
+
+全栈 TypeScript，monorepo（Bun workspaces）：
+
+```text
+apps/
+  server/     # 后端：Hono + Drizzle/pg + Scalar 在线文档
+  engine/     # 同步引擎：独立进程，轮询去重入库
+  web/        # 前端：Vue 3 + antdv-next + Vite
+packages/
+  core/       # 业务核心：去重、折算、加密、上游客户端、DTO
+  db/         # 数据访问层：Drizzle schema + 仓储
+```
+
+数据模型：`api_keys` · `usage_logs` · `subscriptions` · `topups` · `qpu_history` + `members` · `users` · `sessions`。
+
+## 快速开始
+
+前置：Bun、Docker（开发用 PostgreSQL）。
+
+```bash
+bun install
+docker compose up -d          # 起 PostgreSQL
+cp .env.example .env          # 按注释填写
+bun run db:push               # 推送 schema
+bun run dev:server            # 后端（默认 18456）
+bun run dev:engine            # 同步引擎（另开终端）
+bun run dev:web               # 前端 Vite（5175）
+```
+
+在线 API 文档：`http://127.0.0.1:18456/api/docs`。
+
+更多命令与协作约定见 [`AGENTS.md`](AGENTS.md)。
+
+## 文档地图
+
+| 文档 | 什么时候读 | 状态 |
+|------|-----------|------|
+| [`docs/design/需求清单.md`](docs/design/需求清单.md) | **需求权威索引与裁决档案**——R1–R15 全部定案；含支付拆表裁决 | 定稿（2026-10-09） |
+| [`docs/design/技术选型.md`](docs/design/技术选型.md) | 技术栈裁决：全栈 TS；Bun + Hono + Drizzle/pg；前端 Vue 3 + antdv-next；分层落地与回退 | 定稿（2026-10-02） |
+| [`docs/design/api_keys表字段设计.md`](docs/design/api_keys表字段设计.md) | key 登记、生命周期与成员归属 | 定稿（2026-10-01） |
+| [`docs/design/usage_logs表字段设计.md`](docs/design/usage_logs表字段设计.md) | 日志明细、来源提列、去重与写入策略 | 同上 |
+| [`docs/design/payments建模评估.md`](docs/design/payments建模评估.md) | 支付建模复盘：订阅权益 vs 充值入账两分；拆表已采纳 | 定稿（2026-10-09） |
+| [`docs/design/subscriptions表字段设计.md`](docs/design/subscriptions表字段设计.md) | 订阅权益：期间 + 额度预算 + 可选付款事实；`subscription_id` 直连日志 | 待审阅（2026-10-09） |
+| [`docs/design/topups表字段设计.md`](docs/design/topups表字段设计.md) | 充值入账事件：`paid_at` 主轴；不挂订阅 | 待审阅（2026-10-09） |
+| [`docs/design/qpu_history表字段设计.md`](docs/design/qpu_history表字段设计.md) | 换算参数时间线（自动采样、只读） | 定稿（2026-10-01） |
+| [`docs/design/members表字段设计.md`](docs/design/members表字段设计.md) | 成员实体——key 归属、成员视图身份与按成员统计的锚点 | 同上 |
+| [`docs/design/users表字段设计.md`](docs/design/users表字段设计.md) | 管理员（单行）——登录体系的身份落点 | 同上 |
+| [`docs/design/sessions表字段设计.md`](docs/design/sessions表字段设计.md) | 管理面会话——cookie 令牌的服务端对应物 | 同上 |
+| [`docs/design/交互设计-总览与共性.md`](docs/design/交互设计-总览与共性.md) | 交互总纲：访问拓扑、导航、跨页组件、状态与数值呈现约定 | 定稿（2026-10-01） |
+| [`docs/design/交互设计-登录与会话.md`](docs/design/交互设计-登录与会话.md) | 登录页、引导页、改密、成员登录壳 | 同上 |
+| [`docs/design/交互设计-全员总览.md`](docs/design/交互设计-全员总览.md) | 管理面首页：健康带 + 按成员 / key 汇总 | 同上 |
+| [`docs/design/交互设计-调用日志.md`](docs/design/交互设计-调用日志.md) | 调用日志：筛选、明细表、与 key/成员/总览的跳转链 | 定稿（2026-10-08） |
+| [`docs/design/交互设计-key管理.md`](docs/design/交互设计-key管理.md) | 登记（sk-key 唯一界面露面）、启停、归属、死亡显形 | 定稿（2026-10-01） |
+| [`docs/design/交互设计-支付记录.md`](docs/design/交互设计-支付记录.md) | 支付记录（两 Tab）：订阅权益 / 充值入账登记、核对提示 | 待审阅（2026-10-09） |
+| [`docs/design/交互设计-成员管理.md`](docs/design/交互设计-成员管理.md) | 开户、令牌签发/重发（明文仅一次）、停用 | 定稿（2026-10-01） |
+| [`docs/design/交互设计-审计日志.md`](docs/design/交互设计-审计日志.md) | 管理操作留痕时间线 | 同上 |
+| [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员视图三页（总览 / 调用日志 / 支付参数）；订阅徽章展开 + 调用详情 | 定稿（2026-10-09） |
+| [`docs/design/API契约-公共约定.md`](docs/design/API契约-公共约定.md) | API 总纲：路由隔离与鉴权两档、错误信封、时间 / 数值 / 分页 / 命名 | 定稿（2026-10-02） |
+| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 18 端点 | 待审阅（2026-10-09） |
+| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：`/me` · `/overview` · `/logs` | 待审阅（2026-10-09） |
+| [`docs/design/同步引擎设计.md`](docs/design/同步引擎设计.md) | 独立 `apps/engine`：轮次、失败只记录、`engine_status` 快照 | 已实现（定稿 2026-10-05） |
+| [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 上游可用接口参考：鉴权档位、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
+
+- 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）
+- 生命周期：状态流转（草案 → 讨论中 → 待审阅 → 定稿(日期) → 已实现）；定稿后不搬家、只改状态；被取代时删除（git 历史即考古）
 
 ## 关键事实清单（实测 / 源码确认，设计时不得违反）
 
 > 出处均见 [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md)，此处仅索引。
 
-1. **`QuotaPerUnit = 500000`**：quota ÷ 500000 = 额度美元——**它不是实付金额**：折算到实付人民币还需乘「购买汇率」（由运营方定价、可变，历史上调整过一次）
+1. **`QuotaPerUnit = 500000`**：quota ÷ 500000 = 额度美元——**它不是实付金额**；折算到实付金额还需乘「购买汇率」（由运营方定价、可变）
 2. **去重必须用 `request_id`**：`/api/log/token` 返回的 `id` 是每次从 1 重编的展示序号，绝不能用于去重
-3. **`created_at` 是 UTC Unix 秒**（三字段交叉实测），北京时间输入需转换
-4. **1000 条硬上限**：窗口只保留最近 1000 条——实测当前站点的日志速率下约等于 3 天；5 分钟级同步余量充分，但同步停摆超过约 3 天会永久丢数据
-5. **`TokenAuthReadOnly`**：用量/日志接口用宽松鉴权，key 过期 / 额度耗尽仍可查询（用完也能对账）；**显式禁用会被 401 拒绝**
+3. **`created_at` 是 UTC Unix 秒**，本地时间输入需转换
+4. **1000 条硬上限**：窗口只保留最近 1000 条——当前日志速率下约等于 3 天；同步停摆超过窗口会永久丢数据
+5. **`TokenAuthReadOnly`**：用量/日志接口用宽松鉴权，key 过期 / 额度耗尽仍可查询；**显式禁用会被 401 拒绝**
 6. **`DisplayTokenStatEnabled` 已开启**：billing 接口返回 token 级额度

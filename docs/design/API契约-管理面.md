@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 |------|------|
 | 状态 | 待审阅（2026-10-09 支付拆表修订——§7） |
-| 关联 | 《API契约-公共约定》（定稿——总纲）· 八篇交互设计 · `api_keys` / `usage_logs` / `subscriptions` / `topups` / `qpu_history` / `members` 表字段设计（DTO 字段权威）· `需求清单.md` §9（访问主体模型） |
+| 关联 | 《API契约-公共约定》（定稿——总纲）· 八篇交互设计 · `api_keys` / `usage_logs` / `subscriptions` / `topups` / `qpu_history` / `members` / `users` / `sessions` 表字段设计（DTO 字段权威）· `需求清单.md` §9（访问主体模型） |
 | 产出 | 端点清单、请求 / 响应字段、错误码、本稿裁定项（§10）与遗留项（§11） |
 
 ---

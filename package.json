@@ -4,7 +4,6 @@
   "type": "module",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev:server": "bun --hot --env-file=.env apps/server/src/index.ts",
     "dev:engine": "bun --env-file=.env apps/engine/src/index.ts",
