@@ -28,6 +28,8 @@ const username = ref("");
 const password = ref("");
 const error = ref("");
 const loading = ref(false);
+/** 打开后检查登录并拉取中——避免闪现登录表单 */
+const booting = ref(false);
 const list = ref<PlatformSubscription[]>([]);
 
 function readToken(): string {
@@ -51,13 +53,18 @@ watch(
   () => props.open,
   (v) => {
     if (v) {
-      // 每次打开都重新拉取——上游续订/新订阅要能看见
-      if (readToken()) void load(true);
+      // 有 token：先显示「检查中」，拉完再进列表/登录，不闪登录表单
+      if (readToken()) {
+        booting.value = true;
+        void load(true).finally(() => {
+          booting.value = false;
+        });
+      }
     } else {
       list.value = [];
       error.value = "";
       password.value = "";
-      // 用户名可留作便利；密码绝不残留
+      booting.value = false;
     }
   },
 );
@@ -119,7 +126,11 @@ function onUse(s: PlatformSubscription) {
     destroy-on-hidden
     @update:open="emit('update:open', $event)"
   >
-    <template v-if="list.length === 0">
+    <div v-if="booting || (loading && list.length === 0)" class="plat-pick__boot">
+      <a-spin />
+      <span class="plat-pick__boot-text">正在检查登录并拉取…</span>
+    </div>
+    <template v-else-if="list.length === 0">
       <p class="plat-pick__hint">
         使用 NewAPI 控制台账号登录后拉取订阅，仅用于预填登记；密码不保存。
       </p>
@@ -183,6 +194,19 @@ function onUse(s: PlatformSubscription) {
 </template>
 
 <style scoped>
+.plat-pick__boot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+}
+
+.plat-pick__boot-text {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
 .plat-pick__hint {
   margin: 0 0 16px;
   font-size: 12px;

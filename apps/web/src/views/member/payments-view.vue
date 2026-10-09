@@ -28,28 +28,46 @@ const extraPresets = computed(() =>
     .slice(0, 4),
 );
 
-function periodText(p: {
+function periodLines(p: {
   period_start: number;
   period_end: number | null;
-}): string {
-  const end = p.period_end == null ? "进行中" : formatDateTime(p.period_end);
-  return `${formatDateTime(p.period_start)} ~ ${end}`;
+}): { start: string; end: string } {
+  return {
+    start: formatDateTime(p.period_start),
+    end: p.period_end == null ? "进行中" : formatDateTime(p.period_end),
+  };
 }
 
 const subColumns = [
-  { title: "订阅 ID", key: "subscription_id", width: 100 },
+  {
+    title: "订阅 ID",
+    dataIndex: "subscription_id",
+    key: "subscription_id",
+    width: 100,
+  },
   { title: "期间", key: "period", width: 200 },
   { title: "额度", key: "quota", width: 160 },
-  { title: "付款", key: "paid", width: 140 },
-  { title: "备注", key: "remark" },
+  { title: "付款", key: "paid", width: 150 },
+  { title: "备注", dataIndex: "remark", key: "remark", width: 140, ellipsis: true },
 ];
 
 const topColumns = [
   { title: "时间", key: "paid_at", width: 150 },
-  { title: "计费单位 / 实付", key: "money", width: 140 },
+  {
+    title: "充值金额",
+    dataIndex: "amount",
+    key: "amount",
+    width: 100,
+  },
+  {
+    title: "实付金额",
+    dataIndex: "money",
+    key: "money",
+    width: 100,
+  },
   { title: "交易号 / 渠道", key: "trade", width: 180 },
   { title: "派生额度", key: "quota", width: 150 },
-  { title: "备注", key: "remark" },
+  { title: "备注", dataIndex: "remark", key: "remark", width: 140, ellipsis: true },
 ];
 </script>
 
@@ -101,11 +119,14 @@ const topColumns = [
         :row-key="(r: { id: number }) => r.id"
         size="middle"
         :pagination="false"
-        :scroll="{ x: 800 }"
+        :scroll="{ x: 760 }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'period'">
-            {{ periodText(record) }}
+            <div class="mv-period">
+              <span>{{ periodLines(record).start }}</span>
+              <span class="mv-period__end">~ {{ periodLines(record).end }}</span>
+            </div>
           </template>
           <template v-else-if="column.key === 'quota'">
             <QuotaText :quota="record.quota_granted" :quota-usd="record.quota_usd" />
@@ -132,14 +153,17 @@ const topColumns = [
         :row-key="(r: { id: number }) => r.id"
         size="middle"
         :pagination="false"
-        :scroll="{ x: 760 }"
+        :scroll="{ x: 840 }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'paid_at'">
             {{ formatDateTime(record.paid_at) }}
           </template>
+          <template v-else-if="column.key === 'amount'">
+            {{ formatPaidAmount(record.amount) }}
+          </template>
           <template v-else-if="column.key === 'money'">
-            {{ record.amount }} · {{ formatPaidAmount(record.money) }}
+            {{ formatPaidAmount(record.money) }}
           </template>
           <template v-else-if="column.key === 'trade'">
             {{ record.trade_no || "—" }}
@@ -164,6 +188,17 @@ const topColumns = [
 </template>
 
 <style scoped>
+.mv-period {
+  display: flex;
+  flex-direction: column;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mv-period__end {
+  color: rgba(0, 0, 0, 0.65);
+}
+
 .mv-range-label {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.65);

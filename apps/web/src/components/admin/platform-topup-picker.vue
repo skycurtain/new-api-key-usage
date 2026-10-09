@@ -28,6 +28,8 @@ const username = ref("");
 const password = ref("");
 const error = ref("");
 const loading = ref(false);
+/** 打开后检查登录并拉取中——避免闪现登录表单 */
+const booting = ref(false);
 const items = ref<PlatformTopup[]>([]);
 const total = ref(0);
 const page = ref(1);
@@ -121,14 +123,19 @@ watch(
   () => props.open,
   (v) => {
     if (v) {
-      // 每次打开重拉第一页（有 token 则免再输密码）
-      if (readToken()) void loadPage(1, { allowTokenOnly: true });
+      if (readToken()) {
+        booting.value = true;
+        void loadPage(1, { allowTokenOnly: true }).finally(() => {
+          booting.value = false;
+        });
+      }
     } else {
       items.value = [];
       total.value = 0;
       page.value = 1;
       error.value = "";
       password.value = "";
+      booting.value = false;
     }
   },
 );
@@ -145,7 +152,14 @@ watch(
     destroy-on-hidden
     @update:open="emit('update:open', $event)"
   >
-    <template v-if="items.length === 0 && !loading">
+    <div
+      v-if="booting || (loading && items.length === 0)"
+      class="top-pick__boot"
+    >
+      <a-spin />
+      <span class="top-pick__boot-text">正在检查登录并拉取…</span>
+    </div>
+    <template v-else-if="items.length === 0 && !loading">
       <p class="top-pick__hint">
         登录 NewAPI 控制台拉取充值单（传统分页）；密码不保存。
       </p>
@@ -222,6 +236,19 @@ watch(
 </template>
 
 <style scoped>
+.top-pick__boot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+}
+
+.top-pick__boot-text {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
 .top-pick__hint {
   margin: 0 0 16px;
   font-size: 12px;

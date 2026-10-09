@@ -74,7 +74,7 @@ payments
 subscriptions                 topups
   id PK                         id PK
   subscription_id UNIQUE        upstream_id?          ← 上游充值单 id
-  period_start NOT NULL         amount NOT NULL       ← 计费单位（美元额度形态）
+  period_start NOT NULL         amount NOT NULL       ← 平台计费金额（充值额）
   period_end NULL               money NOT NULL        ← 实付
   quota_granted NOT NULL        trade_no / payment_*  ← 渠道事实
   paid_amount NULL              paid_at NOT NULL      ← = 上游 complete_time（唯一事件时刻）

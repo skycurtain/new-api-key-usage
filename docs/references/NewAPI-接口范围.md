@@ -308,7 +308,7 @@ quota = ( (prompt_tokens − cache_tokens)             ← 提示 tokens（未�
 |------|------|------|
 | `id` | `17` | 上游充值单 ID |
 | `user_id` | `6` | 账号 |
-| `amount` | `1` | **计费单位金额**（与「美元额度」同构，≠ 实付货币） |
+| `amount` | `1` | **平台计费金额**（充值记账额；与 `money` 之间为管理员约定汇率，不标币种） |
 | `money` | `2.04` | **实付金额** |
 | `trade_no` | `USR6…` | 交易号 |
 | `payment_method` / `payment_provider` | `alipay` / `epay` | 渠道 |

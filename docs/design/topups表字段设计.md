@@ -23,8 +23,8 @@
 |----|------|----------|------|
 | `id` | bigserial PK | — | 本地主键 |
 | `upstream_id` | bigint? | `id` | 上游充值单 ID（对账；手工补录可空） |
-| `amount` | numeric | `amount` | **计费单位金额**（样本 `1`——美元额度形态，≠ 实付货币） |
-| `money` | numeric | `money` | **实付金额**（样本 `2.04`）；币种无关纯数值 |
+| `amount` | numeric | `amount` | **平台计费金额**（充值记账额，样本 `1`）——与实付 `money` 之间由**管理员约定汇率**换算；**不标币种/单位** |
+| `money` | numeric | `money` | **实付金额**（样本 `2.04`）；同样不预设币种 |
 | `trade_no` | text? | `trade_no` | 交易号 |
 | `payment_method` | text? | `payment_method` | 如 `alipay` |
 | `payment_provider` | text? | `payment_provider` | 如 `epay` |
@@ -37,9 +37,9 @@
 
 ## 3. 「换得额度」是派生
 
-上游无 `quota_granted`：派生 `amount × quota_per_unit`（默认 QPU 500000）。
+上游无 `quota_granted`：派生 `amount × quota_per_unit`（默认 QPU 500000）——`amount` 是平台计费侧充值额，与 quota 同域量纲。
 
-- **只存事实**：`amount` 与 `money` 两真值；比率现算（R6/R9）
+- **只存事实**：`amount`（平台计费）与 `money`（实付）两真值；**汇率不入库**（管理员社交约定，查询/展示可现算 `money/amount`）
 - 不在库中固化派生额度
 
 ## 4. 时刻语义

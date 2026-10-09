@@ -149,8 +149,8 @@ watch(
         s.paid_at != null ? unixToBeijingWall(s.paid_at) : null;
       subForm.remark = s.remark;
     } else {
+      // 订阅的 paid_at 是「套餐付款时刻」，可空——不默认填今天
       resetSub();
-      subForm.paid_at = dayjs();
     }
     if (props.editingTop) {
       isSub.value = false;
@@ -248,7 +248,7 @@ async function onSubmit() {
       }
     } else {
       if (topForm.amount == null || topForm.amount <= 0) {
-        error.value = "请填写计费单位金额（须为正）";
+        error.value = "请填写充值金额 amount（须为正）";
         return;
       }
       if (topForm.money == null || topForm.money < 0) {
@@ -362,7 +362,7 @@ async function onSubmit() {
           {{ quotaPreview }} · 落库为原始 quota
         </div>
       </a-form-item>
-      <a-form-item label="付款金额 / 时间（可空）">
+      <a-form-item label="付款金额 / 付款时间（可空）">
         <a-input-number
           v-model:value="subForm.paid_amount"
           :min="0"
@@ -374,10 +374,12 @@ async function onSubmit() {
           v-model:value="subForm.paid_at"
           :format="TIME_FMT"
           :show-time="{ defaultValue: undefined }"
-          placeholder="付款时间（可空）"
+          placeholder="钱出手时刻（可空）"
           style="width: 200px; margin-left: 8px"
         />
-        <div class="form-note">金额数值——币种由你们约定，系统不预设；金额不可为负</div>
+        <div class="form-note">
+          社交层付款事实：金额数值、币种由你们约定；未知可留空。登记时刻由系统另记
+        </div>
       </a-form-item>
       <a-form-item label="备注">
         <a-input v-model:value="subForm.remark" />
@@ -385,7 +387,7 @@ async function onSubmit() {
     </a-form>
 
     <a-form v-else layout="vertical">
-      <a-form-item label="计费单位 amount" required>
+      <a-form-item label="充值金额 amount" required>
         <a-space>
           <a-input-number
             v-model:value="topForm.amount"
@@ -396,17 +398,18 @@ async function onSubmit() {
           <a-button @click="topPickerOpen = true">从平台选用</a-button>
         </a-space>
         <div class="form-note">
-          上游 amount（美元额度形态）；换得 quota = amount × QPU
+          平台计费侧充值额（不标币种）；与「实付」之间汇率由管理员约定。换得 quota ≈ amount × QPU
           <template v-if="quotaPreview"> · {{ quotaPreview }}</template>
         </div>
       </a-form-item>
-      <a-form-item label="实付 money" required>
+      <a-form-item label="实付金额 money" required>
         <a-input-number
           v-model:value="topForm.money"
           :min="0"
           :precision="2"
           style="width: 180px"
         />
+        <div class="form-note">实际支付金额（不预设币种）</div>
       </a-form-item>
       <a-form-item label="入账时间 paid_at" required>
         <a-date-picker
