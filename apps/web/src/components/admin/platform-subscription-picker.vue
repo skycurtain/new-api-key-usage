@@ -91,6 +91,8 @@ function onUse(s: PlatformSubscription) {
     title="从平台选择订阅"
     :footer="null"
     :width="520"
+    centered
+    :styles="{ body: { maxHeight: '70vh', overflowY: 'auto' } }"
     destroy-on-hidden
     @update:open="emit('update:open', $event)"
   >
