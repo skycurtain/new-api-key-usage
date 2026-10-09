@@ -11,7 +11,7 @@ import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import { useLiveTimeRange } from "@/composables/use-live-time-range.ts";
 import { useAdminLogs, useKeys, useMembers } from "@/queries/admin.ts";
-import { formatDateTime, recentDaysRange } from "@/utils/time.ts";
+import { formatDateTime } from "@/utils/time.ts";
 import { formatInt } from "@/utils/format.ts";
 
 const route = useRoute();

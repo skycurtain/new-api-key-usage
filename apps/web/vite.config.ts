@@ -17,6 +17,9 @@ export default defineConfig({
     },
   },
   server: {
+    // 固定开发口：避免在 5173/5174 被占时静默跳到 5175（strictPort 不自动改口）
+    port: 5175,
+    strictPort: true,
     proxy: {
       // 契约：/api/* 专属接口；SPA 路由不进 /api（公共约定 §2）
       "/api": {

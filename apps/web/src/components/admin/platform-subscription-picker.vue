@@ -2,7 +2,7 @@
 /**
  * 订阅选择弹层：登录（仅一次/标签页）+ 列表选用，与登记表单解耦
  */
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import {
   listPlatformSubscriptions,
   loginPlatform,

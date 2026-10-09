@@ -26,7 +26,6 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 | 命令 | 用途 |
 |------|------|
 | `bun install` | 安装 / 链接 workspace 依赖（在仓库根） |
-| `bun test` | 全部测试（core 契约 + server HTTP + **集成**）；集成需 `DATABASE_URL`（compose 中的 PG），无库时自动跳过 |
 | `bun run db:generate` | 生成 SQL 迁移（`packages/db/drizzle/`） |
 | `bun run db:push` | 推送到本地库（开发期） |
 | `bun run db:studio` | Drizzle Studio 看库 |
