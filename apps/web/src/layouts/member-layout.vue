@@ -26,7 +26,7 @@ const meQuery = useMemberMe();
 
 const collapsed = ref(false);
 const brandTitle = "NAKU";
-const brandDescription = "成员用量";
+const brandDescription = "NewAPI 用量统计";
 const memberName = computed(
   () => tokenStore.memberName || meQuery.data.value?.name || "",
 );
