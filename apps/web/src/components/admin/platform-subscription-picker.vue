@@ -2,7 +2,7 @@
 /**
  * 订阅选择弹层：登录（仅一次/标签页）+ 列表选用，与登记表单解耦
  */
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   listPlatformSubscriptions,
   loginPlatform,
@@ -13,6 +13,8 @@ import { formatDateTime } from "@/utils/time.ts";
 
 const props = defineProps<{
   open: boolean;
+  /** 已登记的 subscription_id——灰显不可选用 */
+  registeredIds?: number[];
 }>();
 
 const emit = defineEmits<{
@@ -45,8 +47,24 @@ function writeToken(token: string) {
   }
 }
 
-async function load() {
-  if (!username.value.trim() || !password.value || loading.value) return;
+watch(
+  () => props.open,
+  (v) => {
+    if (v) {
+      // 每次打开都重新拉取——上游续订/新订阅要能看见
+      if (readToken()) void load(true);
+    } else {
+      list.value = [];
+      error.value = "";
+      password.value = "";
+      // 用户名可留作便利；密码绝不残留
+    }
+  },
+);
+
+async function load(skipLoginCheck = false) {
+  if (loading.value) return;
+  if (!skipLoginCheck && (!username.value.trim() || !password.value)) return;
   error.value = "";
   loading.value = true;
   try {
@@ -58,15 +76,15 @@ async function load() {
       });
       token = login.access_token;
       writeToken(token);
-      password.value = "";
     }
+    password.value = "";
     list.value = await listPlatformSubscriptions(token);
     if (list.value.length === 0) {
       error.value = "账号下没有订阅记录";
     }
   } catch (e) {
     const err = e as ApiError;
-    if (err.status === 401) {
+    if (err.status === 401 || err.code === "platform_token_invalid") {
       writeToken("");
       error.value = "平台登录已失效——请重新输入密码";
     } else {
@@ -79,7 +97,12 @@ async function load() {
   }
 }
 
+function isRegistered(s: PlatformSubscription): boolean {
+  return (props.registeredIds ?? []).includes(s.id);
+}
+
 function onUse(s: PlatformSubscription) {
+  if (isRegistered(s)) return;
   emit("select", s);
   emit("update:open", false);
 }
@@ -139,11 +162,14 @@ function onUse(s: PlatformSubscription) {
           v-for="s in list"
           :key="s.id"
           class="plat-pick__item"
+          :class="{ 'is-registered': isRegistered(s) }"
           @click="onUse(s)"
         >
           <div class="plat-pick__head">
             <strong>订阅 #{{ s.id }}</strong>
-            <span class="plat-pick__status">{{ s.status }}</span>
+            <span class="plat-pick__status">
+              {{ isRegistered(s) ? "已登记" : s.status }}
+            </span>
           </div>
           <div class="plat-pick__meta">
             {{ formatDateTime(s.start_time) }} ~
@@ -179,6 +205,15 @@ function onUse(s: PlatformSubscription) {
 
 .plat-pick__item:hover {
   background: #fafafa;
+}
+
+.plat-pick__item.is-registered {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.plat-pick__item.is-registered:hover {
+  background: transparent;
 }
 
 .plat-pick__item:last-child {

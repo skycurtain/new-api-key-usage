@@ -1,7 +1,8 @@
 import type {
   LogItem,
   Paginated,
-  PaymentItem,
+  SubscriptionItem,
+  TopupItem,
   UnixSec,
   UsageTotals,
 } from "@new-api-key-usage/core";
@@ -27,7 +28,8 @@ export type MemberOverview = {
     log_synced_at: UnixSec | null;
     usage: UsageTotals;
   }>;
-  payments: PaymentItem[];
+  subscriptions: SubscriptionItem[];
+  topups: TopupItem[];
 };
 
 export async function fetchMe(): Promise<MemberMe> {

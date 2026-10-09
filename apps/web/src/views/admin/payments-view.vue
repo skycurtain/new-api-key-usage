@@ -1,136 +1,162 @@
 <script setup lang="ts">
 /**
- * 支付记录（交互设计-支付记录）：同构登记 · 编辑删除 · 核对提示
+ * 支付记录（交互设计-支付记录）：订阅 / 充值两 Tab · 核对提示
  */
 import { computed, ref, watch } from "vue";
 import { message } from "antdv-next";
-import type { PaymentItem } from "@new-api-key-usage/core";
+import type { SubscriptionItem, TopupItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
 import { fetchLogs } from "@/api/admin/logs.ts";
 import { useRoute, useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
 import PaymentFormModal from "@/components/admin/payment-form-modal.vue";
 import QuotaText from "@/components/common/quota-text.vue";
-import { useDeletePayment, usePayments } from "@/queries/admin.ts";
+import {
+  useDeleteSubscription,
+  useDeleteTopup,
+  useSubscriptions,
+  useTopups,
+} from "@/queries/admin.ts";
 import { formatDateTime, toRequestIso } from "@/utils/time.ts";
 import { formatPaidAmount } from "@/utils/format.ts";
 
 const route = useRoute();
 const router = useRouter();
-const paymentsQuery = usePayments();
-const deletePay = useDeletePayment();
+const subsQuery = useSubscriptions();
+const topupsQuery = useTopups();
+const deleteSub = useDeleteSubscription();
+const deleteTop = useDeleteTopup();
 
+const tab = ref<"subs" | "topups">("subs");
 const formOpen = ref(false);
-const editing = ref<PaymentItem | null>(null);
+const editingSub = ref<SubscriptionItem | null>(null);
+const editingTop = ref<TopupItem | null>(null);
 const missingSubs = ref<number[]>([]);
 const checking = ref(false);
 
-const filterKind = ref<"subscription" | "topup" | null>(null);
-
-function syncFiltersFromRoute() {
-  const q = route.query;
-  filterKind.value =
-    q.kind === "subscription" || q.kind === "topup" ? q.kind : null;
+function syncFromRoute() {
+  tab.value = route.query.tab === "topups" ? "topups" : "subs";
 }
 
-function pushFilterQuery() {
-  const query: Record<string, string> = {};
-  if (filterKind.value) query.kind = filterKind.value;
-  void router.replace({ path: "/admin/payments", query });
+function pushTab() {
+  void router.replace({
+    path: "/admin/payments",
+    query: tab.value === "topups" ? { tab: "topups" } : {},
+  });
 }
 
-function onKindChange(v: "subscription" | "topup" | null) {
-  filterKind.value = v;
-  pushFilterQuery();
-}
+syncFromRoute();
+watch(() => route.query, () => syncFromRoute());
+watch(tab, () => pushTab());
 
-const rows = computed(() => {
-  let list = [...(paymentsQuery.data.value ?? [])];
-  if (filterKind.value) {
-    list = list.filter((p) => p.kind === filterKind.value);
-  }
+const subRows = computed(() => [...(subsQuery.data.value ?? [])]);
+const topRows = computed(() => {
+  const list = [...(topupsQuery.data.value ?? [])];
   list.sort((a, b) => (b.paid_at ?? 0) - (a.paid_at ?? 0));
   return list;
 });
 
-const hasFilter = computed(() => filterKind.value != null);
-
-syncFiltersFromRoute();
-watch(
-  () => route.query,
-  () => syncFiltersFromRoute(),
-);
-
-const columns = [
-  { title: "类型", key: "kind", width: 90 },
-  { title: "金额（币种自定）", key: "paid_amount", width: 140 },
-  { title: "时间", key: "time", width: 180 },
+const subColumns = [
   { title: "订阅 ID", key: "subscription_id", width: 100 },
+  { title: "期间", key: "period", width: 200 },
   { title: "额度", key: "quota", width: 160 },
+  { title: "付款", key: "paid", width: 140 },
+  { title: "备注", key: "remark" },
+  { title: "登记", key: "created_at", width: 150 },
+  { title: "操作", key: "actions", width: 120 },
+];
+
+const topColumns = [
+  { title: "时间", key: "paid_at", width: 150 },
+  { title: "计费单位", key: "amount", width: 100 },
+  { title: "实付", key: "money", width: 100 },
+  { title: "交易号 / 渠道", key: "trade", width: 180 },
+  { title: "派生额度", key: "quota", width: 150 },
   { title: "备注", key: "remark" },
   { title: "操作", key: "actions", width: 120 },
 ];
 
-function timeText(p: PaymentItem): string {
-  if (p.kind === "topup") return formatDateTime(p.paid_at);
-  const start = formatDateTime(p.period_start);
-  const end = p.period_end == null ? "进行中" : formatDateTime(p.period_end);
-  return `${start} ~ ${end}`;
+function periodText(s: SubscriptionItem): string {
+  const end = s.period_end == null ? "进行中" : formatDateTime(s.period_end);
+  return `${formatDateTime(s.period_start)} ~ ${end}`;
 }
 
-function onCreate() {
-  editing.value = null;
+function onCreateSub() {
+  editingSub.value = null;
+  editingTop.value = null;
   formOpen.value = true;
 }
 
-function onEdit(p: PaymentItem) {
-  editing.value = p;
+function onCreateTop() {
+  editingSub.value = null;
+  editingTop.value = null;
+  tab.value = "topups";
   formOpen.value = true;
 }
 
-async function onDelete(p: PaymentItem) {
+function onEditSub(s: SubscriptionItem) {
+  editingSub.value = s;
+  editingTop.value = null;
+  formOpen.value = true;
+}
+
+function onEditTop(t: TopupItem) {
+  editingTop.value = t;
+  editingSub.value = null;
+  formOpen.value = true;
+}
+
+async function onDeleteSub(s: SubscriptionItem) {
   try {
-    await deletePay.mutateAsync(p.id);
+    await deleteSub.mutateAsync(s.id);
     message.success("已删除");
   } catch (e) {
     message.error((e as ApiError).message || "删除失败");
   }
 }
 
-/** 观测订阅号 ↔ 已登记：只提示不回填；payments 全空则静默 */
-async function reconcile(pays: PaymentItem[]) {
-  if (pays.length === 0) {
+async function onDeleteTop(t: TopupItem) {
+  try {
+    await deleteTop.mutateAsync(t.id);
+    message.success("已删除");
+  } catch (e) {
+    message.error((e as ApiError).message || "删除失败");
+  }
+}
+
+/** 观测订阅号 ↔ 已登记：只提示不回填；双表皆空则静默 */
+async function reconcile(subs: SubscriptionItem[]) {
+  if (subs.length === 0 && topupsQuery.data.value?.length === 0) {
+    missingSubs.value = [];
+    return;
+  }
+  if (subs.length === 0) {
     missingSubs.value = [];
     return;
   }
   checking.value = true;
   try {
-    const known = new Set(
-      pays.map((p) => p.subscription_id).filter((v): v is number => v != null),
+    const known = new Set(subs.map((s) => s.subscription_id));
+    const earliest = Math.min(
+      ...subs.map((s) => s.period_start ?? 0),
+      Date.now() / 1000,
     );
-    const earliest = Math.min(...pays.map((p) => p.paid_at ?? 0), Date.now() / 1000);
     const from = toRequestIso(new Date((earliest - 30 * 86400) * 1000));
     const to = toRequestIso(new Date());
+    const page = await fetchLogs({
+      from,
+      to,
+      page: 1,
+      page_size: 200,
+      type: 2,
+    });
     const observed = new Set<number>();
-    let page = 1;
-    for (;;) {
-      const res = await fetchLogs({
-        from,
-        to,
-        page,
-        page_size: 200,
-      });
-      for (const it of res.items) {
-        if (it.type === 2 && it.subscription_id != null) {
-          observed.add(it.subscription_id);
-        }
+    for (const it of page.items) {
+      if (it.type === 2 && it.subscription_id != null) {
+        observed.add(it.subscription_id);
       }
-      if (page * 200 >= res.total || page >= 20) break;
-      page += 1;
     }
-    missingSubs.value = [...observed]
-      .filter((id) => !known.has(id))
-      .sort((a, b) => a - b);
+    missingSubs.value = [...observed].filter((id) => !known.has(id)).sort((a, b) => a - b);
   } catch {
     missingSubs.value = [];
   } finally {
@@ -138,12 +164,11 @@ async function reconcile(pays: PaymentItem[]) {
   }
 }
 
-// 数据到达/失效刷新后再核对（挂载时尚未 resolve）
 watch(
-  () => paymentsQuery.data.value,
-  (pays) => {
-    if (!pays) return;
-    void reconcile(pays);
+  () => subsQuery.data.value,
+  (subs) => {
+    if (!subs) return;
+    void reconcile(subs);
   },
   { immediate: true },
 );
@@ -151,34 +176,26 @@ watch(
 
 <template>
   <section>
-    <PageHeader title="支付记录" subtitle="订阅与充值的人工登记">
+    <PageHeader title="支付记录" subtitle="订阅权益与充值入账登记">
       <template #actions>
-        <a-button type="primary" @click="onCreate">登记支付</a-button>
+        <a-button v-if="tab === 'subs'" type="primary" @click="onCreateSub">
+          登记订阅
+        </a-button>
+        <a-button v-else type="primary" @click="onCreateTop">登记充值</a-button>
       </template>
     </PageHeader>
 
-    <div class="payments-filters">
-      <a-select
-        :value="filterKind"
-        :options="[
-          { value: null, label: '全部类型' },
-          { value: 'subscription', label: '订阅' },
-          { value: 'topup', label: '充值' },
-        ]"
-        style="width: 120px"
-        allow-clear
-        placeholder="类型"
-        @update:value="onKindChange"
-      />
-    </div>
+    <a-tabs v-model:active-key="tab">
+      <a-tab-pane key="subs" tab="订阅" />
+      <a-tab-pane key="topups" tab="充值" />
+    </a-tabs>
 
     <a-alert
-      v-if="missingSubs.length"
+      v-if="tab === 'subs' && missingSubs.length"
       type="warning"
       show-icon
       style="margin-bottom: 16px"
       :message="`观测到 ${missingSubs.length} 个订阅有消耗但尚无对应登记`"
-      description="若本部署不登记支付，可忽略此提示；需要入账的请核对补录。"
     >
       <template #description>
         <div class="pay-missing__tags">
@@ -190,74 +207,123 @@ watch(
       </template>
     </a-alert>
 
-    <a-empty
-      v-if="!paymentsQuery.isPending.value && rows.length === 0"
-      :description="hasFilter ? '没有符合筛选的支付记录' : '还没有支付记录——订阅/充值同构登记'"
-    >
-      <a-button v-if="!hasFilter" @click="onCreate">登记支付</a-button>
-    </a-empty>
+    <template v-if="tab === 'subs'">
+      <a-empty
+        v-if="!subsQuery.isPending.value && subRows.length === 0"
+        description="还没有订阅登记——从平台选用或手工登记"
+      >
+        <a-button @click="onCreateSub">登记订阅</a-button>
+      </a-empty>
+      <a-table
+        v-else
+        :columns="subColumns"
+        :data-source="subRows"
+        :row-key="(r: SubscriptionItem) => r.id"
+        :loading="subsQuery.isPending.value || subsQuery.isFetching.value || checking"
+        :pagination="false"
+        size="middle"
+        :scroll="{ x: 960 }"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'period'">
+            {{ periodText(record) }}
+          </template>
+          <template v-else-if="column.key === 'quota'">
+            <QuotaText :quota="record.quota_granted" :quota-usd="record.quota_usd" />
+          </template>
+          <template v-else-if="column.key === 'paid'">
+            {{
+              record.paid_amount != null
+                ? `${formatPaidAmount(record.paid_amount)} · ${formatDateTime(record.paid_at)}`
+                : "—"
+            }}
+          </template>
+          <template v-else-if="column.key === 'remark'">
+            {{ record.remark || "—" }}
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            {{ formatDateTime(record.created_at) }}
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <a-space>
+              <a-button size="small" @click="() => onEditSub(record)">编辑</a-button>
+              <a-popconfirm
+                title="删除后该条将消失"
+                ok-text="删除"
+                cancel-text="取消"
+                @confirm="() => onDeleteSub(record)"
+              >
+                <a-button size="small" danger>删除</a-button>
+              </a-popconfirm>
+            </a-space>
+          </template>
+        </template>
+      </a-table>
+    </template>
 
-    <a-table
-      v-else
-      :columns="columns"
-      :data-source="rows"
-      :row-key="(r: PaymentItem) => r.id"
-      :loading="paymentsQuery.isPending.value || paymentsQuery.isFetching.value || checking"
-      :pagination="false"
-      size="middle"
-      :scroll="{ x: 1000 }"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'kind'">
-          <a-tag :color="record.kind === 'subscription' ? 'blue' : 'gold'">
-            {{ record.kind === "subscription" ? "订阅" : "充值" }}
-          </a-tag>
+    <template v-else>
+      <a-empty
+        v-if="!topupsQuery.isPending.value && topRows.length === 0"
+        description="还没有充值登记"
+      >
+        <a-button @click="onCreateTop">登记充值</a-button>
+      </a-empty>
+      <a-table
+        v-else
+        :columns="topColumns"
+        :data-source="topRows"
+        :row-key="(r: TopupItem) => r.id"
+        :loading="topupsQuery.isPending.value || topupsQuery.isFetching.value"
+        :pagination="false"
+        size="middle"
+        :scroll="{ x: 900 }"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'paid_at'">
+            {{ formatDateTime(record.paid_at) }}
+          </template>
+          <template v-else-if="column.key === 'money'">
+            {{ formatPaidAmount(record.money) }}
+          </template>
+          <template v-else-if="column.key === 'trade'">
+            {{ record.trade_no || "—" }}
+            <span v-if="record.payment_method" class="pay-note">
+              · {{ record.payment_method }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'quota'">
+            <QuotaText :quota="record.quota_derived" :quota-usd="record.quota_usd" />
+          </template>
+          <template v-else-if="column.key === 'remark'">
+            {{ record.remark || "—" }}
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <a-space>
+              <a-button size="small" @click="() => onEditTop(record)">编辑</a-button>
+              <a-popconfirm
+                title="删除后该条将消失"
+                ok-text="删除"
+                cancel-text="取消"
+                @confirm="() => onDeleteTop(record)"
+              >
+                <a-button size="small" danger>删除</a-button>
+              </a-popconfirm>
+            </a-space>
+          </template>
         </template>
-        <template v-else-if="column.key === 'paid_amount'">
-          {{ formatPaidAmount(record.paid_amount) }}
-        </template>
-        <template v-else-if="column.key === 'time'">
-          {{ timeText(record) }}
-        </template>
-        <template v-else-if="column.key === 'subscription_id'">
-          {{ record.subscription_id ?? "—" }}
-        </template>
-        <template v-else-if="column.key === 'quota'">
-          <QuotaText :quota="record.quota_granted" :quota-usd="record.quota_usd" />
-        </template>
-        <template v-else-if="column.key === 'remark'">
-          {{ record.remark || "—" }}
-        </template>
-        <template v-else-if="column.key === 'actions'">
-          <a-space>
-            <a-button size="small" @click="() => onEdit(record)">编辑</a-button>
-            <a-popconfirm
-              title="删除后该条支付记录将消失"
-              description="改错即修，删除即消失"
-              ok-text="删除"
-              cancel-text="取消"
-              @confirm="() => onDelete(record)"
-            >
-              <a-button size="small" danger>删除</a-button>
-            </a-popconfirm>
-          </a-space>
-        </template>
-      </template>
-    </a-table>
+      </a-table>
+    </template>
 
-    <PaymentFormModal v-model:open="formOpen" :editing="editing" />
+    <PaymentFormModal
+      v-model:open="formOpen"
+      :tab="tab"
+      :editing-sub="editingSub"
+      :editing-top="editingTop"
+    />
   </section>
 </template>
 
 <style scoped>
-.payments-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
 .pay-missing__tags {
   display: flex;
   flex-wrap: wrap;
@@ -265,9 +331,9 @@ watch(
   margin-bottom: 4px;
 }
 
-.pay-missing__note {
+.pay-missing__note,
+.pay-note {
   font-size: 12px;
-  line-height: 20px;
-  color: rgba(0, 0, 0, 0.65);
+  color: rgba(0, 0, 0, 0.45);
 }
 </style>

@@ -4,7 +4,7 @@
  * 行展开 = 模型调用详情；来源徽章 = 订阅支付参数弹窗（R12）
  */
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import type { LogItem, PaymentItem } from "@new-api-key-usage/core";
+import type { LogItem, SubscriptionItem } from "@new-api-key-usage/core";
 import { Tooltip } from "antdv-next";
 import { QuestionCircleOutlined } from "@antdv-next/icons";
 import { useRoute, useRouter } from "vue-router";
@@ -28,7 +28,9 @@ const page = ref(1);
 const pageSize = ref(50);
 
 const overviewQuery = useMemberOverview(() => range.value);
-const payments = computed(() => overviewQuery.data.value?.payments ?? []);
+const payments = computed(
+  () => overviewQuery.data.value?.subscriptions ?? [],
+);
 const keys = computed(() => overviewQuery.data.value?.keys ?? []);
 
 const params = computed(() => ({
@@ -51,9 +53,9 @@ const keyOptions = computed(() => [
 ]);
 
 const paymentBySub = computed(() => {
-  const m = new Map<number, PaymentItem>();
+  const m = new Map<number, SubscriptionItem>();
   for (const p of payments.value) {
-    if (p.subscription_id != null) m.set(p.subscription_id, p);
+    m.set(p.subscription_id, p);
   }
   return m;
 });
@@ -115,8 +117,7 @@ function onBadge(record: LogItem, e: MouseEvent) {
   payModalOpen.value = true;
 }
 
-function periodText(p: PaymentItem): string {
-  if (p.kind !== "subscription") return formatDateTime(p.paid_at);
+function periodText(p: SubscriptionItem): string {
   const end = p.period_end == null ? "进行中" : formatDateTime(p.period_end);
   return `${formatDateTime(p.period_start)} ~ ${end}`;
 }

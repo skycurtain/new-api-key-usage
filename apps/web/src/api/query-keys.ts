@@ -40,7 +40,8 @@ export const qk = {
         range.subscription_id ?? "",
         range.type ?? "",
       ] as const,
-    payments: () => ["admin", "payments"] as const,
+    subscriptions: () => ["admin", "subscriptions"] as const,
+    topups: () => ["admin", "topups"] as const,
     qpuLatest: () => ["admin", "qpu-latest"] as const,
     members: () => ["admin", "members"] as const,
     auditLogs: (q: PageQuery & { domain?: string; from?: string; to?: string }) =>

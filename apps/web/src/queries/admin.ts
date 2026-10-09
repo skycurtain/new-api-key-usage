@@ -8,11 +8,19 @@ import {
 import { fetchOverview } from "@/api/admin/overview.ts";
 import { fetchEngine, fetchQpuLatest } from "@/api/admin/engine.ts";
 import {
-  createPayment,
-  deletePayment,
-  fetchPayments,
-  updatePayment,
-} from "@/api/admin/payments.ts";
+  createSubscription,
+  deleteSubscription,
+  fetchSubscriptions,
+  updateSubscription,
+  type SubscriptionBody,
+} from "@/api/admin/subscriptions.ts";
+import {
+  createTopup,
+  deleteTopup,
+  fetchTopups,
+  updateTopup,
+  type TopupBody,
+} from "@/api/admin/topups.ts";
 import {
   createMember,
   fetchMembers,
@@ -94,40 +102,80 @@ export function useAdminLogs(
   });
 }
 
-export function usePayments() {
+export function useSubscriptions() {
   return useQuery({
-    queryKey: qk.admin.payments(),
-    queryFn: fetchPayments,
+    queryKey: qk.admin.subscriptions(),
+    queryFn: fetchSubscriptions,
+    staleTime: 0,
   });
 }
 
-export function useCreatePayment() {
+export function useCreateSubscription() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: createPayment,
+    mutationFn: (body: SubscriptionBody) => createSubscription(body),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.admin.payments() });
+      void qc.invalidateQueries({ queryKey: qk.admin.subscriptions() });
     },
   });
 }
 
-export function useUpdatePayment() {
+export function useUpdateSubscription() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: Record<string, unknown> }) =>
-      updatePayment(id, body),
+    mutationFn: ({ id, body }: { id: number; body: SubscriptionBody }) =>
+      updateSubscription(id, body),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.admin.payments() });
+      void qc.invalidateQueries({ queryKey: qk.admin.subscriptions() });
     },
   });
 }
 
-export function useDeletePayment() {
+export function useDeleteSubscription() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deletePayment,
+    mutationFn: deleteSubscription,
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.admin.payments() });
+      void qc.invalidateQueries({ queryKey: qk.admin.subscriptions() });
+    },
+  });
+}
+
+export function useTopups() {
+  return useQuery({
+    queryKey: qk.admin.topups(),
+    queryFn: fetchTopups,
+    staleTime: 0,
+  });
+}
+
+export function useCreateTopup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TopupBody) => createTopup(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.admin.topups() });
+    },
+  });
+}
+
+export function useUpdateTopup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: TopupBody }) =>
+      updateTopup(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.admin.topups() });
+    },
+  });
+}
+
+export function useDeleteTopup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteTopup,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.admin.topups() });
     },
   });
 }

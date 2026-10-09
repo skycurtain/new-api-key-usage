@@ -16,7 +16,7 @@ import {
   type RangeKind,
   type RangeValue,
 } from "@/composables/use-live-time-range.ts";
-import { useAdminOverview, useEngine, usePayments } from "@/queries/admin.ts";
+import { useAdminOverview, useEngine, useSubscriptions } from "@/queries/admin.ts";
 import { formatMinute, toRequestIso } from "@/utils/time.ts";
 import { formatInt } from "@/utils/format.ts";
 
@@ -25,7 +25,7 @@ const { range, setRange } = useLiveTimeRange("recent-30");
 
 const overviewQuery = useAdminOverview(() => range.value);
 const engineQuery = useEngine();
-const paymentsQuery = usePayments();
+const paymentsQuery = useSubscriptions();
 
 const overview = computed(() => overviewQuery.data.value);
 const engine = computed(() => engineQuery.data.value);
@@ -37,9 +37,9 @@ const loading = computed(
 const extraPresets = computed(() => {
   const list = paymentsQuery.data.value ?? [];
   return list
-    .filter((p) => p.kind === "subscription" && p.period_start != null)
+    .filter((p) => p.period_start != null)
     .map((p) => ({
-      label: `订阅 #${p.subscription_id ?? p.id} 期间`,
+      label: `订阅 #${p.subscription_id} 期间`,
       from: toRequestIso(new Date((p.period_start ?? 0) * 1000)),
       to: toRequestIso(
         new Date((p.period_end ?? Math.floor(Date.now() / 1000)) * 1000),

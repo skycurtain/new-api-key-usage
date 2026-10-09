@@ -20,15 +20,18 @@ const overviewQuery = useMemberOverview(() => range.value);
 const usage = computed(() => overviewQuery.data.value?.usage);
 const bySource = computed(() => overviewQuery.data.value?.by_source ?? []);
 const keys = computed(() => overviewQuery.data.value?.keys ?? []);
-const payments = computed(() => overviewQuery.data.value?.payments ?? []);
+const payments = computed(
+  () => overviewQuery.data.value?.subscriptions ?? [],
+);
 
 const extraPresets = computed(() =>
   payments.value
-    .filter((p) => p.kind === "subscription" && p.period_start != null)
     .map((p) => ({
-      label: `订阅 #${p.subscription_id ?? p.id} 期间`,
+      label: `订阅 #${p.subscription_id} 期间`,
       from: new Date((p.period_start ?? 0) * 1000).toISOString(),
-      to: new Date((p.period_end ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+      to: new Date(
+        (p.period_end ?? Math.floor(Date.now() / 1000)) * 1000,
+      ).toISOString(),
     }))
     .slice(0, 4),
 );

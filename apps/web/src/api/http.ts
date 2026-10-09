@@ -77,7 +77,11 @@ function attachInterceptors(client: AxiosInstance, world: AuthWorld): void {
     (response) => response,
     (error: AxiosError) => {
       const apiError = toApiError(error, world);
-      if (apiError.status === 401) {
+      // 401 仅表示「本世界凭证失效」；上游平台 token 失效是 422 platform_token_invalid
+      if (
+        apiError.status === 401 &&
+        apiError.code !== "platform_token_invalid"
+      ) {
         redirectAuth(world, "expired");
       }
       return Promise.reject(apiError);
