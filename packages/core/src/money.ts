@@ -18,6 +18,15 @@ export function microUsdToQuotaUsdStr(micro: number): string {
   return `${dollars}.${String(rem).padStart(2, "0")}`;
 }
 
+/** 明细行等小额场景：保留更多小数位（默认 4 位，仍是字符串两位小数契约的展示增强） */
+export function microUsdToQuotaUsdStrPrecise(
+  micro: number,
+  fractionDigits = 4,
+): string {
+  const usd = micro / 1_000_000;
+  return usd.toFixed(fractionDigits);
+}
+
 export function quotaToUsdStr(quota: number, qpu: number): string {
   return microUsdToQuotaUsdStr(quotaToMicroUsd(quota, qpu));
 }

@@ -3,6 +3,7 @@
  */
 import {
   microSumToUsdStr,
+  microUsdToQuotaUsdStrPrecise,
   qpuAt,
   quotaToMicroUsd,
   quotaToUsdStr,
@@ -52,6 +53,21 @@ export function usageAt(
 ): UsageSum {
   const qpu = qpuAt(created_at, timeline);
   return { count: 1, quota, quota_usd: quotaToUsdStr(quota, qpu) };
+}
+
+/** 明细行：按当时 QPU 换算，展示保留 6 位小数（微美元级，小额不被抹成 0） */
+export function usageRowPrecise(
+  quota: number,
+  created_at: Date | number,
+  timeline: readonly QpuPoint[],
+): UsageSum {
+  const qpu = qpuAt(created_at, timeline);
+  const micro = quotaToMicroUsd(quota, qpu);
+  return {
+    count: 1,
+    quota,
+    quota_usd: microUsdToQuotaUsdStrPrecise(micro, 6),
+  };
 }
 
 export function addUsage(a: UsageSum, b: UsageSum): UsageSum {

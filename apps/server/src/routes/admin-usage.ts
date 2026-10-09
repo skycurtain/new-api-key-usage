@@ -4,6 +4,7 @@ import {
   resolveQpuTimeline,
   sumUsage,
   toUnixSec,
+  usageRowPrecise,
   type LogItem,
 } from "@new-api-key-usage/core";
 import {
@@ -337,8 +338,9 @@ export function adminUsageRoutes() {
       });
 
       const items: LogItem[] = rows.map((row) => {
-        const { quota_usd } = sumUsage(
-          [{ quota: row.quota, created_at: row.created_at }],
+        const { quota_usd } = usageRowPrecise(
+          row.quota,
+          row.created_at,
           timeline,
         );
         return {

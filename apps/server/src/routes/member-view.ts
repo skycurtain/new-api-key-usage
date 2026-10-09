@@ -3,6 +3,7 @@ import {
   ERR,
   resolveQpuTimeline,
   sumUsage,
+  usageRowPrecise,
   toUnixSec,
   type LogItem,
   type PaymentItem,
@@ -265,8 +266,9 @@ export function memberViewRoutes() {
         page_size,
       });
       const items: LogItem[] = rows.map((row) => {
-        const { quota_usd } = sumUsage(
-          [{ quota: row.quota, created_at: row.created_at }],
+        const { quota_usd } = usageRowPrecise(
+          row.quota,
+          row.created_at,
           timeline,
         );
         return {
