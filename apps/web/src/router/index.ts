@@ -17,10 +17,10 @@ declare module "vue-router" {
 export const router: Router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", redirect: "/admin/overview" },
+    { path: "/", redirect: "/member" },
     ...adminRoutes,
     ...memberRoutes,
-    { path: "/:pathMatch(.*)*", redirect: "/admin/overview" },
+    { path: "/:pathMatch(.*)*", redirect: "/member" },
   ],
 });
 
