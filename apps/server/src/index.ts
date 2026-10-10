@@ -1,12 +1,20 @@
+import { fileURLToPath } from "node:url";
 import { createApp } from "./app.ts";
 import { loadEnv } from "./env.ts";
-import { createDb } from "@new-api-key-usage/db";
+import { createDb, runMigrations } from "@new-api-key-usage/db";
 import { appLogger, setupLogging } from "@new-api-key-usage/core";
 
 const env = loadEnv(process.env);
 setupLogging(env.LOG_LEVEL);
 
 const db = createDb(env.DATABASE_URL);
+
+const migrationsFolder =
+  process.env.MIGRATIONS_FOLDER ??
+  fileURLToPath(new URL("../../../packages/db/drizzle", import.meta.url));
+
+await runMigrations(db, migrationsFolder);
+appLogger("server").info("数据库迁移已就绪");
 
 const app = createApp({
   db,

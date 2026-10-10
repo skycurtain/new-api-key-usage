@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+**/node_modules
+**/dist
+**/.tmp
+**/.vite
+*.log
+api*.json
+session-archive
+coverage
+*.tsbuildinfo
+.claude
+.agents
+agent

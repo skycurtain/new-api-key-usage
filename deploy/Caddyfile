@@ -1,0 +1,17 @@
+# 站点地址按部署环境改：
+#   本地/内网 HTTP → :80
+#   公网 HTTPS    → your.domain.example（Caddy 自动签证书）
+:80 {
+	root * /srv
+
+	# 接口反代到 server 容器
+	handle /api/* {
+		reverse_proxy server:18456
+	}
+
+	# SPA：非 /api 的路径回退 index.html
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

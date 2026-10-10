@@ -64,13 +64,12 @@ packages/
 
 ## 快速开始
 
-前置：Bun、Docker（开发用 PostgreSQL）。
+前置：Bun、一个可用的 PostgreSQL（本机已有或别处均可）。
 
 ```bash
 bun install
-docker compose up -d          # 起 PostgreSQL
-cp .env.example .env          # 按注释填写
-bun run db:push               # 推送 schema
+cp .env.example .env          # DATABASE_URL 指向你已有的 PostgreSQL
+bun run db:push               # 开发期推送 schema
 bun run dev:server            # 后端（默认 18456）
 bun run dev:engine            # 同步引擎（另开终端）
 bun run dev:web               # 前端 Vite（5175）
@@ -79,6 +78,59 @@ bun run dev:web               # 前端 Vite（5175）
 在线 API 文档：`http://127.0.0.1:18456/api/docs`。
 
 更多命令与协作约定见 [`AGENTS.md`](AGENTS.md)。
+
+## 部署
+
+生产形态：**Caddy**（前端静态 + `/api` 反代）+ **server / engine 单文件**（Bun `--compile`）+ PostgreSQL；启动时自动应用 `packages/db/drizzle` 迁移。开发不依赖本 Compose——把 `DATABASE_URL` 指到任意可用 PostgreSQL 即可。
+
+### 起服务
+
+```bash
+cp .env.example .env
+# 必改：DATABASE_URL、SK_KEY_ENCRYPTION_SECRET、NEWAPI_BASE、COOKIE_SECURE
+docker compose up -d --build
+```
+
+- 页面：`http://<服务器>/`；接口文档：`http://<服务器>/api/docs`
+- 升级：`git pull` 后重复 `docker compose up -d --build`（改表随启动迁移）
+
+### 环境变量要点
+
+| 变量 | 说明 |
+|------|------|
+| `DATABASE_URL` | 数据库配置的**唯一来源**（用户 / 密码 / 库名都在串里）。开发指向本机库；部署同一份即可，compose 会把主机改写为容器服务名 `postgres` |
+| `SK_KEY_ENCRYPTION_SECRET` | ≥32 字节随机数（base64url）。**生成一次、入库后不可更换**——丢失则已登记 key 无法解密，与库同等备份 |
+| `NEWAPI_BASE` | 上游 NewAPI 实例根地址 |
+| `COOKIE_SECURE` | HTTPS / 域名用 `true`；纯 IP + HTTP 用 `false`（否则登录后立刻 401） |
+| `ADMIN_INIT_USERNAME` / `ADMIN_INIT_PASSWORD` | 可选；同时存在时空库首次静默建管理员 |
+
+### 服务分工
+
+| 服务 | 职责 | 对外 |
+|------|------|------|
+| `caddy` | 前端静态 + `/api` 反代 | 仅 80 / 443 |
+| `server` | 管理面 / 成员视图 API | 内网 |
+| `engine` | 轮询上游、去重入库 | 内网 |
+| `postgres` | 数据（卷 `pgdata`） | 内网 |
+
+### HTTPS
+
+把 `deploy/Caddyfile` 站点行从 `:80` 改成域名（如 `your.domain.example`），重建后 Caddy 自动签证书；同时设 `COOKIE_SECURE=true`。
+
+### 常用命令
+
+```bash
+docker compose ps                 # 运行状态
+docker compose logs -f engine     # 看同步
+docker compose restart server     # 只重启后端
+docker compose down               # 全停（数据在卷里，不丢）
+```
+
+### 注意
+
+1. `COOKIE_SECURE` 必须与访问方式匹配：HTTP + `true` 会「登录后立刻 401」
+2. `SK_KEY_ENCRYPTION_SECRET` 更换等于已登记 key 全部作废
+3. `DATABASE_URL` 密码含 `@` `:` `/` 等字符时做 URL 编码
 
 ## 文档地图
 
