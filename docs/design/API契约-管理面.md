@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 |------|------|
-| 状态 | 待审阅（2026-10-09 支付拆表修订——§7） |
+| 状态 | 待审阅（2026-10-09 支付拆表修订——§7）；R16 定稿（2026-10-10——§8） |
 | 关联 | 《API契约-公共约定》（定稿——总纲）· 八篇交互设计 · `api_keys` / `usage_logs` / `subscriptions` / `topups` / `qpu_history` / `members` / `users` / `sessions` 表字段设计（DTO 字段权威）· `需求清单.md` §9（访问主体模型） |
 | 产出 | 端点清单、请求 / 响应字段、错误码、本稿裁定项（§10）与遗留项（§11） |
 
@@ -29,7 +29,7 @@
 | 13 | `/api/admin/topups/:id` | PUT / DELETE | 编辑 / 删除 |
 | 14 | `/api/admin/qpu/latest` | GET | 当前换算率（表单美元双输入用） |
 | 15 | `/api/admin/members` | GET / POST | 成员清单 / 开户（令牌明文仅一次） |
-| 16 | `/api/admin/members/:id` | PATCH | 停用 / 启用 |
+| 16 | `/api/admin/members/:id` | PATCH / DELETE | 档案修改（name/remark）与启停 / 空壳删除（仅 `key_count = 0`） |
 | 17 | `/api/admin/members/:id/token` | POST | 令牌重发（明文仅一次） |
 | 18 | `/api/admin/audit-logs` | GET | 审计日志（分页） |
 
@@ -259,7 +259,16 @@
 
 ### PATCH `/api/admin/members/:id` → 200 `member`
 
-`{ "status": "disabled" }` / `active`——停用即成员视图访问立即失效（令牌校验含状态判断）。
+部分更新，单字段或并存均可，审计按实际变更字段各落一行（§9）：
+
+- `{ "status": "disabled" }` / `active`——停用即成员视图访问立即失效（令牌校验含状态判断）
+- `{ "name": "小张" }` / `{ "remark": "同事" }`（R16 档案修改）——`name` 冲突 `409 member_name_taken`；不接受 `token_hash` / `created_at` / `id`
+
+非法值 `422`；成员不存在 `404`。
+
+### DELETE `/api/admin/members/:id` → 204
+
+空壳删除（R16）：**仅当该成员当前 `key_count = 0`**（无任何 `api_keys.member_id` 指向）才物理删除行；否则 `409 member_has_keys`（`fields` 可附 `key_count`）。删除后名称 UNIQUE 释放、令牌一并作废。名下有 key 的清理路径 = 停用（软删除语义不变）。均落审计。
 
 ### POST `/api/admin/members/:id/token` → 201
 
@@ -285,7 +294,7 @@
 |----|------------|
 | key | `key.register` / `key.enable` / `key.disable` / `key.reassign`（归属变更） |
 | payment | `subscription.create` / `subscription.update` / `subscription.delete` / `topup.create` / `topup.update` / `topup.delete`（UI 菜单「支付记录」） |
-| member | `member.create` / `member.enable` / `member.disable` / `member.token_issue`（开户自动签发）/ `member.token_reissue` |
+| member | `member.create` / `member.update`（档案改 name/remark）/ `member.enable` / `member.disable` / `member.token_issue`（开户自动签发）/ `member.token_reissue` / `member.delete`（空壳硬删） |
 | account | `account.password_change` / `account.init`（系统，operator null） |
 
 每个管理面写操作各落一行；查询类与成员侧动作不留痕。**表结构归技术稿（members / api_keys 表设计既有标注），立稿时以本文 DTO 字段为对齐锚点**（§11 遗留 2）。
