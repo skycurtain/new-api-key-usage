@@ -79,12 +79,49 @@ bun run dev:web               # 前端 Vite（5175）
 
 更多命令与协作约定见 [`AGENTS.md`](AGENTS.md)。
 
+## 部署
+
+方案详文见 [`docs/design/部署方案.md`](docs/design/部署方案.md)。形态一句话：**本地打产物包 → 覆盖服务器 `release/` → 一条 compose 命令 → 看容器**。
+
+### 本地打包
+
+```bash
+bun run naku pack
+# 交互选：目标平台 · 打包内容 · 是否 tar.gz
+# 产出 release/：dist · naku-server · naku-engine · naku-migrate · drizzle/
+
+# 非交互（CI / 一键）：
+bun run pack:release
+# 或 bun run naku pack --yes --target=bun-linux-arm64 --only=dist,naku-server
+```
+
+### 服务器
+
+首次安装：把 `docker-compose.yml` · `Dockerfile` · `.dockerignore` · `Caddyfile` · `entrypoint-*.sh` 放到约定目录（如 `/opt/naku/`），再放 `release/`，填写 `.env`（`chmod 600`）。日常更新只覆盖 `release/`。
+
+```bash
+cd /opt/naku
+docker compose up -d --build
+docker compose ps          # migrate 应为 exited(0)，其余 running/healthy
+```
+
+- 页面：`http://<服务器>/`；接口文档：`http://<服务器>/api/docs`
+- 迁移：由 `migrate` 一次性服务在启动时幂等执行（journal），重复执行不会多灌
+- HTTPS：`Caddyfile` 站点行改成域名，`.env` 设 `COOKIE_SECURE=true`，再执行固定命令
+
+### 注意
+
+1. `.env` 不进产物包、不进 git；含 `SK_KEY_ENCRYPTION_SECRET`，须与数据库同等备份
+2. `COOKIE_SECURE` 必须与访问方式匹配：HTTP + `true` 会「登录后立刻 401」
+3. `DATABASE_URL` 密码含 `@` `:` `/` 等字符时做 URL 编码
+
 ## 文档地图
 
 | 文档 | 什么时候读 | 状态 |
 |------|-----------|------|
 | [`docs/design/需求清单.md`](docs/design/需求清单.md) | **需求权威索引与裁决档案**——R1–R16 定案；含支付拆表与成员档案/空壳删除裁决 | 定稿（2026-10-10） |
 | [`docs/design/技术选型.md`](docs/design/技术选型.md) | 技术栈裁决：全栈 TS；Bun + Hono + Drizzle/pg；前端 Vue 3 + antdv-next；分层落地与回退 | 定稿（2026-10-02） |
+| [`docs/design/部署方案.md`](docs/design/部署方案.md) | 母体交付与更新：产物包、服务器目录、容器编排、迁移时机、安全约定 | 已实现（定稿 2026-10-12） |
 | [`docs/design/api_keys表字段设计.md`](docs/design/api_keys表字段设计.md) | key 登记、生命周期与成员归属 | 定稿（2026-10-01） |
 | [`docs/design/usage_logs表字段设计.md`](docs/design/usage_logs表字段设计.md) | 日志明细、来源提列、去重与写入策略 | 同上 |
 | [`docs/design/payments建模评估.md`](docs/design/payments建模评估.md) | 支付建模复盘：订阅权益 vs 充值入账两分；拆表已采纳 | 定稿（2026-10-09） |

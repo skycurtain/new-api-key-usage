@@ -17,8 +17,11 @@
 # 依赖与构建产物
 node_modules/
 dist/
+bin/
 build/
 .turbo/
+release/
+.bun-cache/
 
 # 测试与工具
 coverage/

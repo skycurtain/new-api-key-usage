@@ -33,6 +33,10 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 | `bun run dev:engine` | 开发跑同步引擎（独立进程，读 `SYNC_*` env） |
 | `bun run dev:web` | 开发跑前端 Vite |
 | `bun run build:web` | 前端类型检查 + 产物构建 |
+| `bun run build:server` | 编译后端单文件 → `bin/naku-server`（当前平台） |
+| `bun run build:engine` | 编译同步引擎单文件 → `bin/naku-engine`（当前平台） |
+| `bun run naku` | 打包/构建 CLI（citty + clack）：`naku pack` 交互打部署包 → `release/`；`naku build` 本地构建 → `bin/`；支持 `--yes` / `--target` / `--only` |
+| `bun run pack:release` | 非交互打部署包（= `naku pack --yes`，目标默认 linux-x64） |
 
 环境变量见 `.env.example`（复制为 `.env` 后填写）。
 

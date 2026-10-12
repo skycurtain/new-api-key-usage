@@ -1,0 +1,98 @@
+# 一键部署：docker compose up -d --build
+# 验收：docker compose ps（migrate 应为 exited 0）
+# 环境变量写在 .env（不进产物包；生产务必改密钥与 COOKIE_SECURE）
+# 注意：DATABASE_URL 密码含 @ : / 等字符时需 URL 编码
+
+services:
+  postgres:
+    container_name: naku-postgres
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/entrypoint-pg.sh"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+    volumes:
+      - ./entrypoint-pg.sh:/entrypoint-pg.sh:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$(echo $$DATABASE_URL | sed -E 's#^[^:]+://([^:]+):.*#\\1#')"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    container_name: naku-migrate
+    build:
+      context: .
+      target: app
+    entrypoint: ["/bin/sh", "/entrypoint-app.sh"]
+    command: ["/app/naku-migrate"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MIGRATIONS_FOLDER: /app/drizzle
+    volumes:
+      - ./entrypoint-app.sh:/entrypoint-app.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  server:
+    container_name: naku-server
+    build:
+      context: .
+      target: app
+    entrypoint: ["/bin/sh", "/entrypoint-app.sh"]
+    command: ["/app/naku-server"]
+    environment:
+      PORT: "18456"
+      DATABASE_URL: ${DATABASE_URL}
+      SK_KEY_ENCRYPTION_SECRET: ${SK_KEY_ENCRYPTION_SECRET:?set SK_KEY_ENCRYPTION_SECRET in .env}
+      NEWAPI_BASE: ${NEWAPI_BASE:?set NEWAPI_BASE in .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ADMIN_INIT_USERNAME: ${ADMIN_INIT_USERNAME:-}
+      ADMIN_INIT_PASSWORD: ${ADMIN_INIT_PASSWORD:-}
+      MIGRATIONS_FOLDER: /app/drizzle
+    volumes:
+      - ./entrypoint-app.sh:/entrypoint-app.sh:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  engine:
+    container_name: naku-engine
+    build:
+      context: .
+      target: app
+    entrypoint: ["/bin/sh", "/entrypoint-app.sh"]
+    command: ["/app/naku-engine"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SK_KEY_ENCRYPTION_SECRET: ${SK_KEY_ENCRYPTION_SECRET}
+      NEWAPI_BASE: ${NEWAPI_BASE}
+      SYNC_INTERVAL_MS: ${SYNC_INTERVAL_MS:-300000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MIGRATIONS_FOLDER: /app/drizzle
+    volumes:
+      - ./entrypoint-app.sh:/entrypoint-app.sh:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  caddy:
+    container_name: naku-caddy
+    build:
+      context: .
+      target: proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  pgdata:

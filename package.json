@@ -2,7 +2,10 @@
   "name": "new-api-key-usage",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev:server": "bun --hot --env-file=.env apps/server/src/index.ts",
@@ -11,10 +14,17 @@
     "db:generate": "bun run --cwd packages/db db:generate",
     "db:push": "bun run --cwd packages/db db:push",
     "db:studio": "bun run --cwd packages/db db:studio",
-    "build:web": "bun run --cwd apps/web build"
+    "build:web": "bun run --cwd apps/web build",
+    "build:server": "bun build --compile --outfile=bin/naku-server apps/server/src/index.ts",
+    "build:engine": "bun build --compile --outfile=bin/naku-engine apps/engine/src/index.ts",
+    "pack:release": "bun run scripts/pack-release.ts",
+    "naku": "bun run scripts/cli.ts"
   },
   "devDependencies": {
+    "@clack/prompts": "^1.8.1",
     "@types/bun": "^1.4.2",
+    "citty": "^0.2.2",
     "typescript": "^7.0.2"
-  }
+  },
+  "packageManager": "bun@1.4.2"
 }

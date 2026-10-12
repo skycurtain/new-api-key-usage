@@ -1,0 +1,19 @@
+# 构建上下文只保留 release/ 与 Caddyfile（Dockerfile 仅 COPY 这两处）
+.git
+.env
+.env.*
+!.env.example
+node_modules
+**/node_modules
+apps
+packages
+scripts
+docs
+*.log
+api*.json
+session-archive
+coverage
+*.tsbuildinfo
+.claude
+.agents
+agent
