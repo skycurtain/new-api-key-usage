@@ -115,7 +115,9 @@ export const createMemberBody = z.object({
 });
 
 export const patchMemberBody = z.object({
-  status: z.enum(["active", "disabled"]),
+  name: z.string().min(1).max(64).optional(),
+  remark: z.string().optional(),
+  status: z.enum(["active", "disabled"]).optional(),
 });
 
 export const memberWithToken = z.object({

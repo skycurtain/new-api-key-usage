@@ -22,10 +22,19 @@ export async function createMember(body: {
 
 export async function patchMember(
   id: number,
-  body: { status: "active" | "disabled" },
+  body: {
+    name?: string;
+    remark?: string;
+    status?: "active" | "disabled";
+  },
 ): Promise<MemberItem> {
   const { data } = await adminHttp.patch<MemberItem>(`/members/${id}`, body);
   return data;
+}
+
+/** 空壳删除：仅 key_count = 0 */
+export async function deleteMember(id: number): Promise<void> {
+  await adminHttp.delete(`/members/${id}`);
 }
 
 /** 重发：旧令牌即刻失效，明文仅此一次 */

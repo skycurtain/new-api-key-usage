@@ -135,7 +135,8 @@ export function adminMemberRoutes() {
     createRoute({
       method: "patch",
       path: "/members/{id}",
-      summary: "停用 / 启用",
+      summary: "档案修改 / 停用 / 启用",
+      description: "部分更新 name/remark/status；审计按实际变更字段各落一行",
       tags: ["成员管理"],
       security: [{ adminSession: [] }],
       request: {
@@ -152,27 +153,123 @@ export function adminMemberRoutes() {
         },
         401: err401,
         404: err404,
+        409: err409,
         422: err422,
       },
     }),
     async (c) => {
       const id = Number(c.req.param("id"));
       const body = await c.req.json().catch(() => null);
-      const status = body?.status;
-      if (status !== "active" && status !== "disabled") {
-        return jsonError(c, 422, ERR.validation_failed({ status: "非法状态" }));
-      }
       const repos = c.get("repos");
       const before = await repos.members.findById(id);
       if (!before) return jsonError(c, 404, ERR.not_found());
-      const row = await repos.members.updateStatus(id, status);
+
+      const profile: { name?: string; remark?: string } = {};
+      const actions: Array<{ action: string; summary: string }> = [];
+
+      if (typeof body?.name === "string") {
+        const name = body.name.trim();
+        if (!name || name.length > 64) {
+          return jsonError(
+            c,
+            422,
+            ERR.validation_failed({ name: "名称无效" }),
+          );
+        }
+        if (name !== before.name) {
+          const taken = await repos.members.findByName(name);
+          if (taken && taken.id !== id) {
+            return jsonError(c, 409, ERR.member_name_taken());
+          }
+          profile.name = name;
+          actions.push({
+            action: "member.update",
+            summary: `成员 ${before.name} · 改名为 ${name}`,
+          });
+        }
+      }
+      if (typeof body?.remark === "string") {
+        if (body.remark !== before.remark) {
+          profile.remark = body.remark;
+          actions.push({
+            action: "member.update",
+            summary: `成员 ${before.name} · 修改备注`,
+          });
+        }
+      }
+      let nextStatus: "active" | "disabled" | null = null;
+      if (body?.status === "active" || body?.status === "disabled") {
+        if (body.status !== before.status) {
+          nextStatus = body.status;
+          actions.push({
+            action: body.status === "active" ? "member.enable" : "member.disable",
+            summary: `成员 ${before.name} · ${body.status === "active" ? "启用" : "停用"}`,
+          });
+        }
+      }
+
+      if (Object.keys(profile).length === 0 && !nextStatus) {
+        return jsonError(
+          c,
+          422,
+          ERR.validation_failed({ body: "没有需要更新的字段" }),
+        );
+      }
+
+      let row = before;
+      if (Object.keys(profile).length > 0) {
+        row = await repos.members.updateProfile(id, profile);
+      }
+      if (nextStatus) {
+        row = await repos.members.updateStatus(id, nextStatus);
+      }
+      for (const a of actions) {
+        await repos.audit.insert({
+          operator: c.get("adminUsername") ?? null,
+          domain: "member",
+          action: a.action,
+          summary: a.summary,
+        });
+      }
+      return c.json(toMemberItem(row, await repos.members.countKeys(id)), 200);
+    },
+  );
+
+  r.openapi(
+    createRoute({
+      method: "delete",
+      path: "/members/{id}",
+      summary: "空壳删除",
+      description: "仅 key_count = 0 可硬删；名下有 key 返回 409 member_has_keys",
+      tags: ["成员管理"],
+      security: [{ adminSession: [] }],
+      request: {
+        params: z.object({ id: z.string() }),
+      },
+      responses: {
+        204: { description: "已删除" },
+        401: err401,
+        404: err404,
+        409: err409,
+      },
+    }),
+    async (c) => {
+      const id = Number(c.req.param("id"));
+      const repos = c.get("repos");
+      const before = await repos.members.findById(id);
+      if (!before) return jsonError(c, 404, ERR.not_found());
+      const keyCount = await repos.members.countKeys(id);
+      if (keyCount > 0) {
+        return jsonError(c, 409, ERR.member_has_keys(keyCount));
+      }
+      await repos.members.deleteById(id);
       await repos.audit.insert({
         operator: c.get("adminUsername") ?? null,
         domain: "member",
-        action: status === "active" ? "member.enable" : "member.disable",
-        summary: `成员 ${row.name} · ${status === "active" ? "启用" : "停用"}`,
+        action: "member.delete",
+        summary: `删除成员 ${before.name}`,
       });
-      return c.json(toMemberItem(row, 0), 200);
+      return c.body(null, 204);
     },
   );
 

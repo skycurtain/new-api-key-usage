@@ -23,6 +23,7 @@ import {
 } from "@/api/admin/topups.ts";
 import {
   createMember,
+  deleteMember,
   fetchMembers,
   issueMemberToken,
   patchMember,
@@ -207,10 +208,26 @@ export function usePatchMember() {
       body,
     }: {
       id: number;
-      body: { status: "active" | "disabled" };
+      body: {
+        name?: string;
+        remark?: string;
+        status?: "active" | "disabled";
+      };
     }) => patchMember(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.admin.members() });
+      void qc.invalidateQueries({ queryKey: ["admin", "keys"] });
+    },
+  });
+}
+
+export function useDeleteMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteMember,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.admin.members() });
+      void qc.invalidateQueries({ queryKey: ["admin", "keys"] });
     },
   });
 }

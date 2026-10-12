@@ -36,6 +36,10 @@ export const ERR = {
     errorBody("key_already_registered", "这枚 key 已经登记过", { key_id }),
   member_name_taken: () =>
     errorBody("member_name_taken", "成员名称已被占用"),
+  member_has_keys: (key_count: number) =>
+    errorBody("member_has_keys", `名下仍有 ${key_count} 枚 key，只能停用`, {
+      fields: { key_count: String(key_count) },
+    }),
   upstream_unreachable: () =>
     errorBody("upstream_unreachable", "上游站点暂时不可达，请稍后重试"),
   not_found: () => errorBody("not_found", "请求的资源不存在"),

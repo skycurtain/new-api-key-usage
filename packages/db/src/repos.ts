@@ -294,6 +294,23 @@ export function createRepos(db: Db) {
           .returning();
         return row!;
       },
+      async updateProfile(
+        id: number,
+        values: { name?: string; remark?: string },
+      ): Promise<MemberRow> {
+        const patch: { name?: string; remark?: string } = {};
+        if (values.name !== undefined) patch.name = values.name;
+        if (values.remark !== undefined) patch.remark = values.remark;
+        const [row] = await db
+          .update(members)
+          .set(patch)
+          .where(eq(members.id, id))
+          .returning();
+        return row!;
+      },
+      async deleteById(id: number): Promise<void> {
+        await db.delete(members).where(eq(members.id, id));
+      },
       async reissueToken(
         id: number,
         token_hash: string,

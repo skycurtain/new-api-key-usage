@@ -138,10 +138,12 @@ export type AuditAction =
   | "payment.update"
   | "payment.delete"
   | "member.create"
+  | "member.update"
   | "member.enable"
   | "member.disable"
   | "member.token_issue"
   | "member.token_reissue"
+  | "member.delete"
   | "account.password_change"
   | "account.init";
 

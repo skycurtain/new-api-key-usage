@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 成员管理（交互设计-成员管理）：清单表 · 开户 · 令牌明文/重发 · 启停
+ * 成员管理（交互设计-成员管理）：清单表 · 开户 · 档案修改 · 令牌明文/重发 · 启停 · 空壳删除
  */
 import { computed, h, reactive, ref, watch } from "vue";
 import { Tooltip, message } from "antdv-next";
@@ -16,6 +16,7 @@ import TableRefresh from "@/components/common/table-refresh.vue";
 import MemberTokenModal from "@/components/admin/member-token-modal.vue";
 import {
   useCreateMember,
+  useDeleteMember,
   useIssueMemberToken,
   useMembers,
   usePatchMember,
@@ -25,15 +26,20 @@ import { formatMinute } from "@/utils/time.ts";
 const membersQuery = useMembers();
 const createMember = useCreateMember();
 const patchMember = usePatchMember();
+const deleteMember = useDeleteMember();
 const issueToken = useIssueMemberToken();
 
 const createOpen = ref(false);
+const editOpen = ref(false);
 const tokenOpen = ref(false);
 const plainToken = ref("");
 const tokenMemberName = ref("");
 
 const createForm = reactive({ name: "", remark: "" });
 const createError = ref("");
+
+const editForm = reactive({ id: 0, name: "", remark: "" });
+const editError = ref("");
 
 const filterName = ref("");
 const filterStatus = ref<"active" | "disabled" | null>(null);
@@ -83,7 +89,7 @@ const columns = [
     width: 170,
   },
   { title: "名下 Key 数", key: "key_count", width: 110 },
-  { title: "操作", key: "actions", width: 200 },
+  { title: "操作", key: "actions", width: 280 },
 ];
 
 const rows = computed(() => {
@@ -166,11 +172,48 @@ async function onToggle(record: MemberItem) {
     message.error((e as ApiError).message || "状态更新失败");
   }
 }
+
+function openEdit(record: MemberItem) {
+  editForm.id = record.id;
+  editForm.name = record.name;
+  editForm.remark = record.remark ?? "";
+  editError.value = "";
+  editOpen.value = true;
+}
+
+async function onEdit() {
+  editError.value = "";
+  const name = editForm.name.trim();
+  if (!name) {
+    editError.value = "请填写成员名称";
+    return;
+  }
+  try {
+    await patchMember.mutateAsync({
+      id: editForm.id,
+      body: { name, remark: editForm.remark },
+    });
+    editOpen.value = false;
+    message.success("已保存");
+  } catch (e) {
+    const err = e as ApiError;
+    editError.value = err.message || "保存失败";
+  }
+}
+
+async function onDelete(record: MemberItem) {
+  try {
+    await deleteMember.mutateAsync(record.id);
+    message.success("已删除——仅清理未挂 key 的空壳");
+  } catch (e) {
+    message.error((e as ApiError).message || "删除失败");
+  }
+}
 </script>
 
 <template>
   <section>
-    <PageHeader title="成员管理" subtitle="开户、访问令牌与启停">
+    <PageHeader title="成员管理" subtitle="开户、档案修改、访问令牌与启停">
       <template #actions>
         <a-button type="primary" @click="createOpen = true">新建成员</a-button>
       </template>
@@ -242,6 +285,7 @@ async function onToggle(record: MemberItem) {
             >
               查调用
             </a-button>
+            <a-button size="small" @click="() => openEdit(record)">编辑</a-button>
             <a-popconfirm
               title="重发后旧令牌立即失效"
               description="该成员正在用的访问将中断"
@@ -264,10 +308,45 @@ async function onToggle(record: MemberItem) {
             <a-button v-else size="small" @click="() => onToggle(record)">
               启用
             </a-button>
+            <a-tooltip
+              v-if="record.key_count > 0"
+              title="名下仍有 key，只能停用"
+            >
+              <a-button size="small" danger disabled>删除</a-button>
+            </a-tooltip>
+            <a-popconfirm
+              v-else
+              title="删除后不可恢复（名称与令牌一并作废）"
+              description="仅清理未挂 key 的空壳"
+              ok-text="删除"
+              cancel-text="取消"
+              @confirm="() => onDelete(record)"
+            >
+              <a-button size="small" danger>删除</a-button>
+            </a-popconfirm>
           </a-space>
         </template>
       </template>
     </a-table>
+
+    <a-modal
+      v-model:open="editOpen"
+      title="编辑成员"
+      :confirm-loading="patchMember.isPending.value"
+      ok-text="保存"
+      cancel-text="取消"
+      @ok="onEdit"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="名称" required>
+          <a-input v-model:value="editForm.name" placeholder="成员名称" />
+        </a-form-item>
+        <a-form-item label="备注">
+          <a-input v-model:value="editForm.remark" placeholder="备注（可选）" />
+        </a-form-item>
+        <a-alert v-if="editError" type="error" show-icon :message="editError" />
+      </a-form>
+    </a-modal>
 
     <a-modal
       v-model:open="createOpen"

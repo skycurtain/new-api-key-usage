@@ -99,7 +99,7 @@ export function createApp(opts: CreateAppOptions) {
       { name: "引导与会话", description: "三态判定 / 登录 / 改密" },
       { name: "引擎", description: "同步引擎状态" },
       { name: "Key 管理", description: "登记 / 启停 / 归属" },
-      { name: "成员管理", description: "开户 / 令牌 / 启停" },
+      { name: "成员管理", description: "开户 / 档案 / 令牌 / 启停 / 空壳删除" },
       { name: "成员视图", description: "令牌自助查询" },
     ],
   });
