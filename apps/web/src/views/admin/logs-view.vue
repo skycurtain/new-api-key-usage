@@ -9,7 +9,10 @@ import PageHeader from "@/components/common/page-header.vue";
 import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
-import { useLiveTimeRange } from "@/composables/use-live-time-range.ts";
+import {
+  useLiveTimeRange,
+  type RangeKind,
+} from "@/composables/use-live-time-range.ts";
 import { useAdminLogs, useKeys, useMembers } from "@/queries/admin.ts";
 import { formatDateTime } from "@/utils/time.ts";
 import { formatInt } from "@/utils/format.ts";
@@ -177,7 +180,7 @@ let ro: ResizeObserver | null = null;
 
 function onRangeChange(
   v: { from: string; to: string },
-  k: "recent-7" | "recent-30" | "fixed",
+  k: RangeKind,
 ) {
   setRange(v, k);
   page.value = 1;

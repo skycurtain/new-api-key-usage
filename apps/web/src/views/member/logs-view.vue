@@ -13,6 +13,7 @@ import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import { useMemberRange } from "@/composables/use-member-range.ts";
+import type { RangeKind } from "@/stores/member-range.ts";
 import { useMemberLogs, useMemberOverview } from "@/queries/member.ts";
 import { formatDateTime } from "@/utils/time.ts";
 import { formatInt, formatPaidAmount } from "@/utils/format.ts";
@@ -177,7 +178,7 @@ watch([apiKeyId, billingSource, subscriptionId, typeFilter], () => {
 });
 watch(page, () => pushQuery());
 
-function onRangeChange(v: { from: string; to: string }, k: "recent-7" | "recent-30" | "fixed") {
+function onRangeChange(v: { from: string; to: string }, k: RangeKind) {
   setRange(v, k);
   page.value = 1;
   pushQuery();

@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import { recentDaysRange } from "@/utils/time.ts";
 
 export type RangeValue = { from: string; to: string };
-export type RangeKind = "recent-7" | "recent-30" | "fixed";
+export type RangeKind = "today" | "recent-7" | "recent-30" | "fixed";
 
 /**
  * 成员端全局时间范围——总览 / 调用日志 / 支付参数共用。

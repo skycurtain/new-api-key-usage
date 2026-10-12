@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { computed } from "vue";
 import {
   recentDaysRange,
+  todayRange,
   wallAsBeijingIso,
   type RangeValue,
 } from "@/utils/time.ts";
@@ -29,6 +30,10 @@ const pickerValue = computed<[Dayjs, Dayjs] | null>(() => {
 const presets = computed(() => {
   const builtIn = [
     {
+      label: "今天",
+      value: rangeToDayjs(todayRange()),
+    },
+    {
       label: "最近 7 天",
       value: rangeToDayjs(recentDaysRange(7)),
     },
@@ -51,6 +56,13 @@ function rangeToDayjs(range: RangeValue): [Dayjs, Dayjs] {
 function detectKind(value: RangeValue): RangeKind {
   const fromD = dayjs(value.from).format("YYYY-MM-DD");
   const toD = dayjs(value.to).format("YYYY-MM-DD");
+  const today = todayRange();
+  if (
+    dayjs(today.from).format("YYYY-MM-DD") === fromD &&
+    dayjs(today.to).format("YYYY-MM-DD") === toD
+  ) {
+    return "today";
+  }
   for (const days of [7, 30] as const) {
     const r = recentDaysRange(days);
     if (

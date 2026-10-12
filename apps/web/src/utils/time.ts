@@ -83,6 +83,14 @@ export function recentDaysRange(
   return { from: shanghaiIso(from), to: shanghaiIso(to) };
 }
 
+/** 快捷项：今天（北京时间日界，左闭右开） */
+export function todayRange(nowMs: number = Date.now()): {
+  from: string;
+  to: string;
+} {
+  return recentDaysRange(1, nowMs);
+}
+
 /** 统计口径标注：「2026-09-02 ~ 10-01」（北京时间日） */
 export function formatRangeCaption(fromIso: string, toIso: string): string {
   if (!fromIso || !toIso) return "—";

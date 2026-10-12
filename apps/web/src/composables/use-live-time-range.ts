@@ -1,12 +1,12 @@
 import { computed, onUnmounted, ref } from "vue";
-import { recentDaysRange } from "@/utils/time.ts";
+import { recentDaysRange, todayRange } from "@/utils/time.ts";
 
 export type RangeValue = { from: string; to: string };
-export type RangeKind = "recent-7" | "recent-30" | "fixed";
+export type RangeKind = "today" | "recent-7" | "recent-30" | "fixed";
 
 /**
  * 可跟随「今天」推进的时间范围：
- * - 最近 7/30 天：定时重算窗口（页面挂过夜也不会陈旧）
+ * - 今天 / 最近 7/30 天：定时重算窗口（页面挂过夜也不会陈旧）
  * - fixed：自定义/订阅期间等绝对区间，窗口不挪
  */
 export function useLiveTimeRange(initial: Exclude<RangeKind, "fixed"> = "recent-30") {
@@ -21,6 +21,7 @@ export function useLiveTimeRange(initial: Exclude<RangeKind, "fixed"> = "recent-
 
   const range = computed<RangeValue>(() => {
     void nowTick.value;
+    if (kind.value === "today") return todayRange();
     if (kind.value === "recent-7") return recentDaysRange(7);
     if (kind.value === "recent-30") return recentDaysRange(30);
     return fixed.value;
