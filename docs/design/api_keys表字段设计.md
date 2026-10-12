@@ -55,7 +55,7 @@
 
 - `key_hash`（HMAC-SHA256，不可逆）：只服务「命中判定」——没有它，每次查询都要把全部 key 送去上游验证
 - `key_ciphertext`（AES-256-GCM，可解密）：唯一用途是调上游
-- 密钥 `SK_KEY_ENCRYPTION_SECRET` 经 env 注入（HKDF 派生 hmac / aes 子密钥）；**密钥丢失 = 全部 key 需重新登记**（记入部署文档）
+- 密钥 `SK_KEY_ENCRYPTION_SECRET` 经 env 注入（HKDF 派生 hmac / aes 子密钥）；**密钥丢失 = 全部 key 需重新登记**
 
 > **注解：为什么是两个字段（给非密码学背景的读者）**
 >

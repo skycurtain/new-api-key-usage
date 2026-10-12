@@ -8,7 +8,6 @@
 - **命名**：需求 / 设计 / 交互 / 技术 / 计划等**文档名**用中文（`README` / `AGENTS` / `LICENSE` 等约定俗成除外）、**目录**用英文；新文档按性质放入 `docs/design/`（我们定的方案与决策）或 `docs/references/`（平台可用接口参考——实证事实，不做设计决策），并同步更新 README 的「文档地图」；`docs/deprecated/` 只归档已废弃文档——**勿引用、勿作依据**（需要时再建）
 - **代码文件命名**：所有**目录名与文件名**一律 kebab-case（如 `time-range-picker.vue` · `admin-session.ts`）；**组件在模板中引用时用大驼峰**（`<TimeRangePicker />`）——文件名 kebab、模板标签 PascalCase
 - **文档状态**：头部表格标「状态」（草案 → 讨论中 → 待审阅 → 定稿(日期) → 已实现）；设计文档定稿后不搬家、只改状态；被取代时删除（git 历史即考古）
-- **部署**：交付物必须保证「一条命令链」可部署；**双形态并行已裁决**——完整前后端（运营方服务器）先行，Cloudflare Workers 抽取版（作者自部署）后续（见 `docs/design/需求清单.md` R13）
 - **不引入版本叙事**：不使用 v1/v2/v3 之类版本编号，不以「MVP」等标签或指称显式描述任何历史阶段；文档内容必须**自立**——不得引用、描述任何当前仓库之外、可能被删除的分支或目录内容
 - **本地不入库也不 ignore 的物料**（AI 提交时务必避开）：`api*.json`（上游实测快照）、`session-archive/`（作者主动备份的会话记录）——不加入 git、不写 `.gitignore`，靠提交时人工/执行者目视把关
 
@@ -34,7 +33,6 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 | `bun run dev:engine` | 开发跑同步引擎（独立进程，读 `SYNC_*` env） |
 | `bun run dev:web` | 开发跑前端 Vite |
 | `bun run build:web` | 前端类型检查 + 产物构建 |
-| `docker compose up -d --build` | 部署一键起（server / engine / caddy / pg） |
 
 环境变量见 `.env.example`（复制为 `.env` 后填写）。
 
