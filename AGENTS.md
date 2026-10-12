@@ -27,7 +27,7 @@ Bun 工具链（选型见 `docs/design/技术选型.md`）。**Windows 上 `bun`
 |------|------|
 | `bun install` | 安装 / 链接 workspace 依赖（在仓库根） |
 | `bun run db:generate` | 生成 SQL 迁移（`packages/db/drizzle/`） |
-| `bun run db:push` | 推送到本地库（开发期） |
+| `bun run db:push` | 推送到本地库（开发期；**服务启动不自动迁**） |
 | `bun run db:studio` | Drizzle Studio 看库 |
 | `bun run typecheck` | 根 tsconfig 类型检查（不含 web `.vue`） |
 | `bun run dev:server` | 开发跑后端（hot reload） |

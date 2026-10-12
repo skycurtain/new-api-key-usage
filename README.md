@@ -69,7 +69,7 @@ packages/
 ```bash
 bun install
 cp .env.example .env          # DATABASE_URL 指向你已有的 PostgreSQL
-bun run db:push               # 开发期推送 schema
+bun run db:push               # 开发期推送 schema（启动不自动迁）
 bun run dev:server            # 后端（默认 18456）
 bun run dev:engine            # 同步引擎（另开终端）
 bun run dev:web               # 前端 Vite（5175）
@@ -81,7 +81,7 @@ bun run dev:web               # 前端 Vite（5175）
 
 ## 部署
 
-生产形态：**Caddy**（前端静态 + `/api` 反代）+ **server / engine 单文件**（Bun `--compile`）+ PostgreSQL；启动时自动应用 `packages/db/drizzle` 迁移。开发不依赖本 Compose——把 `DATABASE_URL` 指到任意可用 PostgreSQL 即可。
+生产形态：**Caddy**（前端静态 + `/api` 反代）+ **server / engine 单文件**（Bun `--compile`）+ PostgreSQL。**迁移不随服务启动**——改表后先用 `db:push` / 手动应用 SQL，再起服务。开发不依赖本 Compose——把 `DATABASE_URL` 指到任意可用 PostgreSQL 即可。
 
 ### 起服务
 
@@ -92,7 +92,7 @@ docker compose up -d --build
 ```
 
 - 页面：`http://<服务器>/`；接口文档：`http://<服务器>/api/docs`
-- 升级：`git pull` 后重复 `docker compose up -d --build`（改表随启动迁移）
+- 升级：`git pull` → 有表变更时先应用 schema → 再 `docker compose up -d --build`
 
 ### 环境变量要点
 
