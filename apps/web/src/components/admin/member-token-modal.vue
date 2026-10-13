@@ -5,6 +5,7 @@
 import { ref, watch } from "vue";
 import { message } from "antdv-next";
 import { CopyOutlined, WarningOutlined } from "@antdv-next/icons";
+import { useClipboard } from "@vueuse/core";
 
 const props = defineProps<{
   open: boolean;
@@ -27,9 +28,12 @@ watch(
   },
 );
 
+/** legacy: true —— HTTP 等非 Secure Context 无 Clipboard API 时退回 execCommand */
+const { copy } = useClipboard({ legacy: true });
+
 async function onCopy() {
   try {
-    await navigator.clipboard.writeText(props.token);
+    await copy(props.token);
     message.success("已复制");
   } catch {
     message.error("复制失败，请手动选中复制");
