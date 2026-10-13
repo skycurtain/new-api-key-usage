@@ -105,8 +105,9 @@ docker compose up -d --build
 docker compose ps          # migrate 应为 exited(0)，其余 running/healthy
 ```
 
-- 页面：`http://<服务器>/`；接口文档：`http://<服务器>/api/docs`
+- 页面：`http://<服务器>/`（若改了 `HTTP_PORT` 则加端口）；接口文档：`http://<服务器>/api/docs`
 - 迁移：由 `migrate` 一次性服务在启动时幂等执行（journal），重复执行不会多灌
+- 端口：默认 80/443；宿主机被占用时在 `.env` 设 `HTTP_PORT` / `HTTPS_PORT`，再执行固定命令
 - HTTPS：`Caddyfile` 站点行改成域名，`.env` 设 `COOKIE_SECURE=true`，再执行固定命令
 
 ### 注意
