@@ -5,7 +5,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import type { MemberItem } from "@new-api-key-usage/core";
 import type { ApiError } from "@/api/http.ts";
-import { useCreateMember, useRegisterKey } from "@/queries/admin.ts";
+import { useCreateMember, useRegisterKey, useBillingDomainOptions } from "@/queries/admin.ts";
 import MemberTokenModal from "@/components/admin/member-token-modal.vue";
 
 const props = defineProps<{
@@ -20,10 +20,12 @@ const emit = defineEmits<{
 
 const register = useRegisterKey();
 const createMember = useCreateMember();
+const domainOptions = useBillingDomainOptions();
 
 const form = reactive({
   sk_key: "",
   member_id: null as number | "unassigned" | null,
+  billing_domain: "",
 });
 const resultMsg = ref<{ type: "success" | "error" | "warning"; text: string } | null>(
   null,
@@ -41,6 +43,7 @@ watch(
     if (!v) {
       form.sk_key = "";
       form.member_id = null;
+      form.billing_domain = "";
       resultMsg.value = null;
       showNewMember.value = false;
       newMemberName.value = "";
@@ -67,6 +70,7 @@ async function onSubmit() {
         form.member_id === "unassigned" || form.member_id == null
           ? null
           : form.member_id,
+      billing_domain: form.billing_domain.trim() || null,
     });
     resultMsg.value = {
       type: "success",
@@ -169,6 +173,13 @@ async function onCreateMember() {
         >
           + 新建成员
         </a-button>
+      </a-form-item>
+      <a-form-item label="账本域">
+        <a-auto-complete
+          v-model:value="form.billing_domain"
+          :options="domainOptions"
+          allow-clear
+        />
       </a-form-item>
       <a-form-item v-if="showNewMember" label="新成员名称">
         <a-input

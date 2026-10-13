@@ -46,6 +46,7 @@ export interface KeyItem {
   status: KeyStatus;
   member_id: number | null;
   member_name: string | null;
+  billing_domain: string | null;
   registered_at: UnixSec;
   log_synced_at: UnixSec | null;
   usage_synced_at: UnixSec | null;
@@ -66,6 +67,7 @@ export interface SubscriptionItem {
   quota_usd: QuotaUsd;
   paid_amount: PaidAmount | null;
   paid_at: UnixSec | null;
+  billing_domain: string | null;
   remark: string;
   created_at: UnixSec;
 }
@@ -83,6 +85,7 @@ export interface TopupItem {
   paid_at: UnixSec;
   quota_derived: Quota;
   quota_usd: QuotaUsd;
+  billing_domain: string | null;
   remark: string;
   created_at: UnixSec;
 }

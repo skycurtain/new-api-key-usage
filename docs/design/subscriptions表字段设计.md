@@ -29,6 +29,7 @@
 | `quota_granted` | bigint | 人工录入（钱包页 `amount_total`） | 套餐总额度——**原始 quota 整数**（与日志 `quota` 同域；充值侧无此列，额度由 `amount × qpu` 派生） |
 | `paid_amount` | numeric? | 人工录入（支付凭证） | 该套餐实付金额；币种无关纯数值；未知可空 |
 | `paid_at` | timestamptz? | 人工录入（支付凭证） | **钱出手时刻**（非登记时刻）；未知可空 |
+| `billing_domain` | text NULL | 人工标注（登记 / 编辑） | **账本域标签**（如 `carpool` / `office`）；空 = 未标域，成员不可见（涉及该订阅 `subscription_id` 的日志事实直连除外） |
 | `remark` | text | 人工填写 | 备注 |
 | `created_at` | timestamptz | 系统 | **登记入库时刻**（补录审计） |
 
@@ -60,5 +61,5 @@
 
 ## 6. 对外边界
 
-- 参数对成员**完全公开透明**（含 `remark` / 金额）——访问主体模型裁决
+- 参数对成员**同账本域内可见**（含 `remark` / 金额）——同域透明、跨域隔离；未标域默认对成员隐藏，例外：该订阅 `subscription_id` 出现在本人名下 key 的 `type = 2` 日志中（事实直连）
 - 无「应付」、无分摊字段

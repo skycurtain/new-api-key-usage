@@ -37,6 +37,7 @@ function toSubscriptionItem(
     quota_usd,
     paid_amount: row.paid_amount,
     paid_at: toUnixSec(row.paid_at),
+    billing_domain: row.billing_domain,
     remark: row.remark,
     created_at: toUnixSec(row.created_at)!,
   };
@@ -52,6 +53,7 @@ function parseSubBody(body: z.infer<typeof createSubscriptionBodySchema>):
         quota_granted: number;
         paid_amount: number | null;
         paid_at: Date | null;
+        billing_domain: string | null;
         remark: string;
       };
     } {
@@ -74,6 +76,10 @@ function parseSubBody(body: z.infer<typeof createSubscriptionBodySchema>):
       quota_granted: body.quota_granted,
       paid_amount: body.paid_amount ?? null,
       paid_at: body.paid_at ? new Date(body.paid_at) : null,
+      billing_domain:
+        typeof body.billing_domain === "string" && body.billing_domain.trim()
+          ? body.billing_domain.trim()
+          : null,
       remark: body.remark ?? "",
     },
   };
@@ -90,6 +96,11 @@ export function adminSubscriptionRoutes() {
       summary: "订阅权益清单",
       tags: ["支付记录"],
       security: [{ adminSession: [] }],
+      request: {
+        query: z.object({
+          billing_domain: z.string().optional(),
+        }),
+      },
       responses: {
         200: {
           description: "subscription 数组",
@@ -103,7 +114,14 @@ export function adminSubscriptionRoutes() {
     async (c) => {
       const repos = c.get("repos");
       const timeline = resolveQpuTimeline(await repos.qpu.listTimeline());
-      const rows = await repos.subscriptions.listAll();
+      const q = c.req.query();
+      const filter =
+        q.billing_domain === "none"
+          ? { billing_domain: "none" as const }
+          : q.billing_domain
+            ? { billing_domain: q.billing_domain }
+            : undefined;
+      const rows = await repos.subscriptions.listAll(filter);
       return c.json(
         rows.map((row) =>
           toSubscriptionItem(

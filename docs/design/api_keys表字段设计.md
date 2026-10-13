@@ -32,6 +32,7 @@
 | `key_ciphertext` | bytea | 登记时 AES-256-GCM（管理员粘贴输入），nonce + 密文 + tag 打包 | 调上游时解密原文（唯一用途） |
 | `status` | text | 管理面启停（引擎只读） | `active` / `disabled`；轮询清单 = active；disabled 数据保留、仅移出轮询 |
 | `member_id` | bigint FK NULL | 归属登记（管理通道） | → `members.id`；成员视图与按成员统计的锚点；空 = 未归属 |
+| `billing_domain` | text NULL | 人工标注（登记 / 行内编辑） | **账本域标签**（如 `carpool` / `office`）——区分用途的自由文本，非身份、非权限；空 = 未标域；成员可见性与支付记录的 `billing_domain` 对齐 |
 | `registered_at` | timestamptz | 登记时写入 | 空态文案「数据自该 key 登记起累积」 |
 | `log_synced_at` | timestamptz NULL | 日志同步成功时写入 | **「数据截止 HH:mm」的唯一来源**；同步失败的显形信号（停滞） |
 | `usage_synced_at` | timestamptz NULL | 额度采集成功时写入 | 额度信息的新鲜度（UI 若做）、排查 |

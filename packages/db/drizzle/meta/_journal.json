@@ -8,6 +8,13 @@
       "when": 1791551016051,
       "tag": "0000_loose_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791878178512,
+      "tag": "0001_aromatic_hawkeye",
+      "breakpoints": true
     }
   ]
 }

@@ -79,6 +79,7 @@ export const keyItem = z.object({
   status: z.enum(["active", "disabled"]),
   member_id: z.number().int().nullable(),
   member_name: z.string().nullable(),
+  billing_domain: z.string().nullable(),
   registered_at: z.number().int(),
   log_synced_at: z.number().int().nullable(),
   usage_synced_at: z.number().int().nullable(),
@@ -92,11 +93,13 @@ export const keyItem = z.object({
 export const registerKeyBody = z.object({
   sk_key: z.string().min(8),
   member_id: z.number().int().positive().nullable().optional(),
+  billing_domain: z.string().nullable().optional(),
 });
 
 export const patchKeyBody = z.object({
   status: z.enum(["active", "disabled"]).optional(),
   member_id: z.number().int().positive().nullable().optional(),
+  billing_domain: z.string().nullable().optional(),
 });
 
 export const memberItem = z.object({
@@ -141,6 +144,7 @@ export const subscriptionItem = z.object({
   quota_usd: z.string(),
   paid_amount: z.number().nullable(),
   paid_at: z.number().int().nullable(),
+  billing_domain: z.string().nullable(),
   remark: z.string(),
   created_at: z.number().int(),
 });
@@ -157,6 +161,7 @@ export const topupItem = z.object({
   paid_at: z.number().int(),
   quota_derived: z.number().int(),
   quota_usd: z.string(),
+  billing_domain: z.string().nullable(),
   remark: z.string(),
   created_at: z.number().int(),
 });
@@ -218,6 +223,7 @@ export const createSubscriptionBody = z
     quota_granted: z.number().int().positive(),
     paid_amount: z.number().nullable().optional(),
     paid_at: z.string().min(1).nullable().optional(),
+    billing_domain: z.string().nullable().optional(),
     remark: z.string().default(""),
   });
 
@@ -230,6 +236,7 @@ export const createTopupBody = z.object({
   payment_provider: z.string().nullable().optional(),
   status: z.string().nullable().optional(),
   paid_at: z.string().min(1),
+  billing_domain: z.string().nullable().optional(),
   remark: z.string().default(""),
 });
 

@@ -30,6 +30,7 @@ function toKeyItem(row: ApiKeyRow & { member_name?: string | null }): KeyItem {
     status: row.status as "active" | "disabled",
     member_id: row.member_id,
     member_name: row.member_name ?? null,
+    billing_domain: row.billing_domain,
     registered_at: toUnixSec(row.registered_at)!,
     log_synced_at: toUnixSec(row.log_synced_at),
     usage_synced_at: toUnixSec(row.usage_synced_at),
@@ -59,6 +60,7 @@ export function adminKeyRoutes() {
         query: z.object({
           member_id: z.string().optional(),
           status: z.enum(["active", "disabled"]).optional(),
+          billing_domain: z.string().optional(),
           recent_failed: z.enum(["true", "false"]).optional(),
         }),
       },
@@ -77,12 +79,15 @@ export function adminKeyRoutes() {
       const filter: {
         member_id?: number | "unassigned";
         status?: string;
+        billing_domain?: string | "none";
       } = {};
       if (q.member_id === "unassigned") filter.member_id = "unassigned";
       else if (q.member_id) filter.member_id = Number(q.member_id);
       if (q.status === "active" || q.status === "disabled") {
         filter.status = q.status;
       }
+      if (q.billing_domain === "none") filter.billing_domain = "none";
+      else if (q.billing_domain) filter.billing_domain = q.billing_domain;
       let rows = await c.get("repos").keys.listAll(filter);
       if (q.recent_failed === "true") {
         const snap = await c.get("repos").engine.getSnapshot();
@@ -143,6 +148,10 @@ export function adminKeyRoutes() {
           );
         }
         member_id = n;
+      }
+      let billing_domain: string | null = null;
+      if (typeof body?.billing_domain === "string" && body.billing_domain.trim()) {
+        billing_domain = body.billing_domain.trim();
       }
       if (!sk_key || !sk_key.startsWith("sk-")) {
         return jsonError(
@@ -208,6 +217,7 @@ export function adminKeyRoutes() {
         key_hash,
         key_ciphertext,
         member_id,
+        billing_domain,
         token_name: usage.name ?? "",
       });
       // 首次登记即写入上游额度字段（表设计 §4：首轮日志同步异步补）
@@ -241,7 +251,7 @@ export function adminKeyRoutes() {
     createRoute({
       method: "patch",
       path: "/keys/{id}",
-      summary: "启停 / 归属变更",
+      summary: "启停 / 归属 / 账本域变更",
       description: "部分更新；审计按实际变更字段各落一行",
       tags: ["Key 管理"],
       security: [{ adminSession: [] }],
@@ -298,6 +308,19 @@ export function adminKeyRoutes() {
           actions.push({
             action: "key.reassign",
             summary: `key #${before.id} · 归属变更`,
+          });
+        }
+      }
+      if (body && "billing_domain" in body) {
+        let nextDomain: string | null = null;
+        if (typeof body.billing_domain === "string" && body.billing_domain.trim()) {
+          nextDomain = body.billing_domain.trim();
+        }
+        if (nextDomain !== before.billing_domain) {
+          patch.billing_domain = nextDomain;
+          actions.push({
+            action: "key.reassign",
+            summary: `key #${before.id} · 账本域变更`,
           });
         }
       }

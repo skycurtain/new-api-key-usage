@@ -8,11 +8,16 @@ export type SubscriptionBody = {
   quota_granted: number;
   paid_amount?: number | null;
   paid_at?: string | null;
+  billing_domain?: string | null;
   remark?: string;
 };
 
-export async function fetchSubscriptions(): Promise<SubscriptionItem[]> {
-  const { data } = await adminHttp.get<SubscriptionItem[]>("/subscriptions");
+export async function fetchSubscriptions(filter?: {
+  billing_domain?: string | "none";
+}): Promise<SubscriptionItem[]> {
+  const { data } = await adminHttp.get<SubscriptionItem[]>("/subscriptions", {
+    params: filter,
+  });
   return data;
 }
 

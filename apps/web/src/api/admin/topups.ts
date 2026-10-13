@@ -10,11 +10,16 @@ export type TopupBody = {
   payment_provider?: string | null;
   status?: string | null;
   paid_at: string;
+  billing_domain?: string | null;
   remark?: string;
 };
 
-export async function fetchTopups(): Promise<TopupItem[]> {
-  const { data } = await adminHttp.get<TopupItem[]>("/topups");
+export async function fetchTopups(filter?: {
+  billing_domain?: string | "none";
+}): Promise<TopupItem[]> {
+  const { data } = await adminHttp.get<TopupItem[]>("/topups", {
+    params: filter,
+  });
   return data;
 }
 

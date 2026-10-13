@@ -11,7 +11,7 @@ import type { ApiError } from "@/api/http.ts";
 import PageHeader from "@/components/common/page-header.vue";
 import TableRefresh from "@/components/common/table-refresh.vue";
 import RegisterKeyModal from "@/components/admin/register-key-modal.vue";
-import { useEngine, useKeys, useMembers, usePatchKey } from "@/queries/admin.ts";
+import { useEngine, useKeys, useMembers, usePatchKey, useBillingDomainOptions } from "@/queries/admin.ts";
 import { formatInt } from "@/utils/format.ts";
 import { formatMinute, hoursSince } from "@/utils/time.ts";
 
@@ -23,6 +23,8 @@ const highlightKeyId = ref<number | null>(null);
 
 const filterMember = ref<number | "unassigned" | null>(null);
 const filterStatus = ref<"active" | "disabled" | null>(null);
+const filterDomain = ref<string | "none" | null>(null);
+let domainSaveTimer: ReturnType<typeof setTimeout> | null = null;
 const filterRecentFailed = ref(false);
 
 /** URL → 筛选（总览跳入） */
@@ -35,6 +37,10 @@ function syncFromRoute() {
 
   if (q.status === "active" || q.status === "disabled") filterStatus.value = q.status;
   else filterStatus.value = null;
+  if (q.billing_domain === "none") filterDomain.value = "none";
+  else if (typeof q.billing_domain === "string" && q.billing_domain) {
+    filterDomain.value = q.billing_domain;
+  } else filterDomain.value = null;
 
   filterRecentFailed.value = q.recent_failed === "1" || q.recent_failed === "true";
 
@@ -52,18 +58,21 @@ function pushQuery() {
   if (filterMember.value === "unassigned") query.member_id = "unassigned";
   else if (filterMember.value != null) query.member_id = String(filterMember.value);
   if (filterStatus.value) query.status = filterStatus.value;
+  if (filterDomain.value === "none") query.billing_domain = "none";
+  else if (filterDomain.value) query.billing_domain = filterDomain.value;
   if (filterRecentFailed.value) query.recent_failed = "1";
   if (highlightKeyId.value != null) query.key_id = String(highlightKeyId.value);
   void router.replace({ path: "/admin/keys", query });
 }
 
-watch([filterMember, filterStatus, filterRecentFailed], () => {
+watch([filterMember, filterStatus, filterDomain, filterRecentFailed], () => {
   pushQuery();
 });
 
 const filters = computed(() => ({
   member_id: filterMember.value ?? undefined,
   status: filterStatus.value ?? undefined,
+  billing_domain: filterDomain.value ?? undefined,
   recent_failed: filterRecentFailed.value ? true : undefined,
 }));
 
@@ -91,6 +100,7 @@ const hasActiveFilter = computed(
   () =>
     filterMember.value != null ||
     filterStatus.value != null ||
+    filterDomain.value != null ||
     filterRecentFailed.value,
 );
 
@@ -98,6 +108,8 @@ const memberOptions = computed(() => [
   { value: "unassigned", label: "未归属" },
   ...(membersQuery.data.value ?? []).map((m) => ({ value: m.id, label: m.name })),
 ]);
+
+const domainOptions = useBillingDomainOptions();
 
 function isStalled(logSyncedAt: number | null | undefined): boolean {
   const h = hoursSince(logSyncedAt);
@@ -122,6 +134,7 @@ function tipTitle(label: string, tip: string) {
 const columns = [
   { title: "名称", key: "token_name", width: 160 },
   { title: "归属", key: "member_name", width: 140 },
+  { title: "账本域", key: "billing_domain", width: 110 },
   { title: "状态", key: "status", width: 100 },
   {
     title: tipTitle(
@@ -153,6 +166,36 @@ async function onMemberChange(
     message.success("归属已更新");
   } catch (e) {
     message.error((e as ApiError).message || "归属更新失败");
+  }
+}
+
+async function onDomainChange(record: KeyItem, value: string) {
+  const next = value.trim() || null;
+  if ((record.billing_domain ?? null) === next) return;
+  if (domainSaveTimer != null) clearTimeout(domainSaveTimer);
+  const id = record.id;
+  domainSaveTimer = setTimeout(() => {
+    domainSaveTimer = null;
+    void saveDomain(id, next);
+  }, 400);
+}
+
+async function onDomainBlur(record: KeyItem, value: string) {
+  const next = value.trim() || null;
+  if (domainSaveTimer != null) {
+    clearTimeout(domainSaveTimer);
+    domainSaveTimer = null;
+  }
+  if ((record.billing_domain ?? null) === next) return;
+  await saveDomain(record.id, next);
+}
+
+async function saveDomain(id: number, billing_domain: string | null) {
+  try {
+    await patchKey.mutateAsync({ id, body: { billing_domain } });
+    message.success("账本域已更新");
+  } catch (e) {
+    message.error((e as ApiError).message || "账本域更新失败");
   }
 }
 
@@ -227,6 +270,17 @@ function onRowClass(record: KeyItem) {
           placeholder="状态"
           allow-clear
         />
+        <a-select
+          v-model:value="filterDomain"
+          :options="[
+            { value: null, label: '全部账本域' },
+            { value: 'none', label: '未标注' },
+            ...domainOptions,
+          ]"
+          style="width: 140px"
+          placeholder="账本域"
+          allow-clear
+        />
         <a-checkbox v-model:checked="filterRecentFailed">最近轮次失败</a-checkbox>
       </a-space>
     </div>
@@ -271,6 +325,17 @@ function onRowClass(record: KeyItem) {
             size="small"
             style="width: 120px"
             @change="(v: number | 'unassigned') => onMemberChange(record, v)"
+          />
+        </template>
+        <template v-else-if="column.key === 'billing_domain'">
+          <a-auto-complete
+            :value="record.billing_domain ?? ''"
+            :options="domainOptions"
+            size="small"
+            style="width: 120px"
+            allow-clear
+            @change="(v: string) => onDomainChange(record, v)"
+            @blur="(e: FocusEvent) => onDomainBlur(record, (e.target as HTMLInputElement)?.value ?? '')"
           />
         </template>
         <template v-else-if="column.key === 'status'">

@@ -25,6 +25,36 @@ const route = useRoute();
 const router = useRouter();
 const subsQuery = useSubscriptions();
 const topupsQuery = useTopups();
+
+const filterDomain = ref<string | "none" | null>(null);
+const domainOptions = computed(() => {
+  const set = new Set<string>();
+  for (const s of subsQuery.data.value ?? []) {
+    if (s.billing_domain) set.add(s.billing_domain);
+  }
+  for (const t of topupsQuery.data.value ?? []) {
+    if (t.billing_domain) set.add(t.billing_domain);
+  }
+  return [...set].sort().map((v) => ({ value: v, label: v }));
+});
+
+const filteredSubs = computed(() => {
+  const list = subsQuery.data.value ?? [];
+  if (!filterDomain.value) return list;
+  if (filterDomain.value === "none") {
+    return list.filter((r) => r.billing_domain == null);
+  }
+  return list.filter((r) => r.billing_domain === filterDomain.value);
+});
+
+const filteredTops = computed(() => {
+  const list = topupsQuery.data.value ?? [];
+  if (!filterDomain.value) return list;
+  if (filterDomain.value === "none") {
+    return list.filter((r) => r.billing_domain == null);
+  }
+  return list.filter((r) => r.billing_domain === filterDomain.value);
+});
 const deleteSub = useDeleteSubscription();
 const deleteTop = useDeleteTopup();
 
@@ -50,9 +80,9 @@ syncFromRoute();
 watch(() => route.query, () => syncFromRoute());
 watch(tab, () => pushTab());
 
-const subRows = computed(() => [...(subsQuery.data.value ?? [])]);
+const subRows = computed(() => [...filteredSubs.value]);
 const topRows = computed(() => {
-  const list = [...(topupsQuery.data.value ?? [])];
+  const list = [...filteredTops.value];
   list.sort((a, b) => (b.paid_at ?? 0) - (a.paid_at ?? 0));
   return list;
 });
@@ -62,6 +92,7 @@ const subColumns = [
   { title: "期间", key: "period", width: 200 },
   { title: "额度", key: "quota", width: 160 },
   { title: "付款金额 / 时间", key: "paid", width: 170 },
+  { title: "账本域", key: "billing_domain", width: 110 },
   { title: "备注", key: "remark" },
   { title: "登记", key: "created_at", width: 150 },
   { title: "操作", key: "actions", width: 120 },
@@ -78,6 +109,7 @@ const topColumns = [
   { title: "实付金额", dataIndex: "money", key: "money", width: 100 },
   { title: "交易号 / 渠道", key: "trade", width: 180 },
   { title: "派生额度", key: "quota", width: 150 },
+  { title: "账本域", key: "billing_domain", width: 110 },
   { title: "备注", key: "remark" },
   { title: "操作", key: "actions", width: 120 },
 ];
@@ -198,6 +230,20 @@ watch(
       <a-tab-pane key="topups" tab="充值" />
     </a-tabs>
 
+    <div class="payments-toolbar">
+      <a-select
+        v-model:value="filterDomain"
+        :options="[
+          { value: null, label: '全部账本域' },
+          { value: 'none', label: '未标注' },
+          ...domainOptions,
+        ]"
+        style="width: 160px"
+        placeholder="账本域"
+        allow-clear
+      />
+    </div>
+
     <a-alert
       v-if="tab === 'subs' && missingSubs.length"
       type="warning"
@@ -252,6 +298,9 @@ watch(
                 ? `${formatPaidAmount(record.paid_amount)} · ${formatDateTime(record.paid_at)}`
                 : "—"
             }}
+          </template>
+          <template v-else-if="column.key === 'billing_domain'">
+            {{ record.billing_domain || "—" }}
           </template>
           <template v-else-if="column.key === 'remark'">
             {{ record.remark || "—" }}
@@ -316,6 +365,9 @@ watch(
           <template v-else-if="column.key === 'quota'">
             <QuotaText :quota="record.quota_derived" :quota-usd="record.quota_usd" />
           </template>
+          <template v-else-if="column.key === 'billing_domain'">
+            {{ record.billing_domain || "—" }}
+          </template>
           <template v-else-if="column.key === 'remark'">
             {{ record.remark || "—" }}
           </template>
@@ -346,6 +398,10 @@ watch(
 </template>
 
 <style scoped>
+.payments-toolbar {
+  margin-bottom: 12px;
+}
+
 .pay-period {
   display: flex;
   flex-direction: column;

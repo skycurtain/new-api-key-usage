@@ -48,13 +48,13 @@
   "subscriptions": [
     { "id": 3, "subscription_id": 44, "period_start": "2026-09-01T00:00:00Z",
       "period_end": "2026-10-01T00:00:00Z", "quota_granted": 12500000, "quota_usd": "25.00",
-      "paid_amount": 170, "paid_at": "2026-08-28T10:00:00Z", "remark": "九月拼车",
+      "paid_amount": 170, "paid_at": "2026-08-28T10:00:00Z", "billing_domain": "carpool", "remark": "九月拼车",
       "created_at": "2026-09-02T12:00:00Z" }
   ],
   "topups": [
     { "id": 1, "upstream_id": 17, "amount": 1, "money": 2.04,
       "trade_no": "USR6…", "payment_method": "alipay", "payment_provider": "epay",
-      "status": "success", "paid_at": "…",
+      "status": "success", "paid_at": "…", "billing_domain": "carpool",
       "quota_derived": 500000, "quota_usd": "1.00",
       "remark": "", "created_at": "…" }
   ]
@@ -62,7 +62,7 @@
 ```
 
 - `usage`：该时段总用量（总览摘要条）；`by_source`：订阅 / 充值分解（分段条）；`keys`：我的 Key 表（`log_synced_at` 支撑停滞标注）
-- `subscriptions` / `topups`：**支付参数页 + 订阅徽章弹窗 + 「本订阅期间」快捷项**的数据源，判定见 §5 裁定 2；对成员**全字段可见**（含 `remark`）；两集皆空 = 纯用量模式中性空态
+- `subscriptions` / `topups`：**支付参数页 + 订阅徽章弹窗 + 「本订阅期间」快捷项**的数据源，判定见 §5 裁定 2；对成员**同账本域内全字段可见**（含 `remark`）；两集皆空 = 纯用量模式中性空态
 - 订阅徽章弹窗仅限「订阅 #N」（查 `subscriptions`）：「充值」不弹窗（余额池无逐笔）、「未关联」不可点；降级「该订阅无登记信息」
 
 ## 4. 日志明细
@@ -92,7 +92,7 @@
 ## 5. 本稿裁定项（请作者重点审）
 
 1. **成员视图明细默认全类型**（消费 + 错误）——对齐「事实可查」；聚合仍仅 `type = 2`（用量口径不变）；`type` 可筛 2 / `error`；
-2. **「该时段涉及」登记的判定**：订阅 = 该时段日志（`type = 2`）出现过的 `subscription_id` 对应 `subscriptions` 行 **∪ 进行中的订阅**（`period_end` 为空或未来——支撑「本订阅期间」快捷项）；充值 = `paid_at ∈ [from, to)`（入账事件按付费时刻锚定）；补录审计看各表 `created_at`（不进本判定）；
+2. **「该时段涉及」登记的判定**（账本域隔离）：成员的**我的域** = 名下 key 的 `billing_domain` 非空并集。订阅 = 该时段日志（`type = 2`）出现过的 `subscription_id` 对应 `subscriptions` 行（**事实直连**，含未标域） **∪**（进行中 **∧** `billing_domain ∈ 我的域`）——未标域进行中订阅不放行；充值 = **`billing_domain ∈ 我的域`** ∧ `paid_at ∈ [from, to)`——未标域充值不放行。管理面不受此限；
 3. **明细行 DTO 与管理面同构**：同一 `LogItem` 类型，成员端经归属与 `type` 恒定过滤；
 4. **「充值」徽章不弹窗**——余额池扣款与具体充值记录无逐笔关联，弹窗回答不了「这笔花在哪」（《交互设计-成员视图》§4.2：订阅徽章才开支付参数弹窗，「充值」为纯标识；行展开只放模型调用详情）。
 

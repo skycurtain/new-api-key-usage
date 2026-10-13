@@ -30,6 +30,7 @@
 | `payment_provider` | text? | `payment_provider` | 如 `epay` |
 | `status` | text? | `status` | 如 `success`；失败单一般不入账本 |
 | `paid_at` | timestamptz | **`complete_time`** | **入账时刻（唯一事件时间）**——平台列表展示的就是它；上游 `create_time` 不入库 |
+| `billing_domain` | text NULL | 人工标注（登记 / 编辑） | **账本域标签**（如 `carpool` / `office`）；空 = 未标域，成员不可见（充值无逐笔日志连线，无法用日志证明「与我相关」） |
 | `remark` | text | — | 人工备注 |
 | `created_at` | timestamptz | — | 本系统登记时刻（补录审计） |
 
@@ -68,7 +69,7 @@
 
 ## 6. 对外边界
 
-- 成员可见：`amount`、`money`、渠道、`paid_at`、备注；无逐笔与模型日志的连线
+- 成员可见：`amount`、`money`、渠道、`paid_at`、备注、`billing_domain`；**仅本人名下 key 所属账本域内**；无逐笔与模型日志的连线；未标域默认不可见
 - 纯用量模式可不登记
 
 ## 7. 迁移说明

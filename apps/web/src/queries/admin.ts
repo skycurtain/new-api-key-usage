@@ -1,3 +1,4 @@
+import { computed, type ComputedRef } from "vue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import {
   fetchKeys,
@@ -84,7 +85,11 @@ export function usePatchKey() {
       body,
     }: {
       id: number;
-      body: { status?: "active" | "disabled"; member_id?: number | null };
+      body: {
+        status?: "active" | "disabled";
+        member_id?: number | null;
+        billing_domain?: string | null;
+      };
     }) => patchKey(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "keys"] });
@@ -106,7 +111,7 @@ export function useAdminLogs(
 export function useSubscriptions() {
   return useQuery({
     queryKey: qk.admin.subscriptions(),
-    queryFn: fetchSubscriptions,
+    queryFn: () => fetchSubscriptions(),
     staleTime: 0,
   });
 }
@@ -145,7 +150,7 @@ export function useDeleteSubscription() {
 export function useTopups() {
   return useQuery({
     queryKey: qk.admin.topups(),
-    queryFn: fetchTopups,
+    queryFn: () => fetchTopups(),
     staleTime: 0,
   });
 }
@@ -248,5 +253,27 @@ export function useAuditLogs(
   return useQuery({
     queryKey: () => qk.admin.auditLogs(params()),
     queryFn: () => fetchAuditLogs(params()),
+  });
+}
+
+/** 账本域联想：keys ∪ 订阅 ∪ 充值 已出现过的值（不强制） */
+export function useBillingDomainOptions(): ComputedRef<
+  Array<{ value: string }>
+> {
+  const keysQuery = useKeys(() => ({}));
+  const subsQuery = useSubscriptions();
+  const topupsQuery = useTopups();
+  return computed(() => {
+    const set = new Set<string>();
+    for (const k of keysQuery.data.value ?? []) {
+      if (k.billing_domain) set.add(k.billing_domain);
+    }
+    for (const s of subsQuery.data.value ?? []) {
+      if (s.billing_domain) set.add(s.billing_domain);
+    }
+    for (const t of topupsQuery.data.value ?? []) {
+      if (t.billing_domain) set.add(t.billing_domain);
+    }
+    return [...set].sort().map((value) => ({ value }));
   });
 }

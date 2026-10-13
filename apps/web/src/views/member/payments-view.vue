@@ -49,6 +49,7 @@ const subColumns = [
   { title: "期间", key: "period", width: 200 },
   { title: "额度", key: "quota", width: 160 },
   { title: "付款金额 / 时间", key: "paid", width: 170 },
+  { title: "账本域", dataIndex: "billing_domain", key: "billing_domain", width: 110 },
   { title: "备注", dataIndex: "remark", key: "remark", width: 140, ellipsis: true },
 ];
 
@@ -68,6 +69,7 @@ const topColumns = [
   },
   { title: "交易号 / 渠道", key: "trade", width: 180 },
   { title: "派生额度", key: "quota", width: 150 },
+  { title: "账本域", dataIndex: "billing_domain", key: "billing_domain", width: 110 },
   { title: "备注", dataIndex: "remark", key: "remark", width: 140, ellipsis: true },
 ];
 </script>
@@ -76,7 +78,7 @@ const topColumns = [
   <section>
     <PageHeader
       title="支付参数"
-      subtitle="订阅与充值的登记参数 · 对成员完全公开"
+      subtitle="订阅与充值的登记参数 · 同账本域内可见"
     >
       <template #actions>
         <span class="mv-range-label">时间范围</span>
@@ -186,7 +188,7 @@ const topColumns = [
       </a-table>
 
       <div class="mv-foot">
-        支付参数对成员完全公开；币种由成员与作者约定
+        支付参数在你所属账本域内公开；币种由成员与作者约定
       </div>
     </template>
   </section>

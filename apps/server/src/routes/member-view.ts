@@ -71,7 +71,7 @@ export function memberViewRoutes() {
       path: "/overview",
       summary: "单页聚合",
       description:
-        "名下 key 的 type=2 用量 + 来源分解 + 支付参数（完全公开透明）",
+        "名下 key 的 type=2 用量 + 来源分解 + 支付参数（同账本域内可见）",
       tags: ["成员视图"],
       security: [{ memberToken: [] }],
       request: {
@@ -159,8 +159,13 @@ export function memberViewRoutes() {
         usage: sumUsage(v.rows, timeline),
       }));
 
-      // 「该时段涉及」：订阅 = 日志出现过的 subscription_id ∪ 进行中；充值 = paid_at ∈ [from,to)
+      // 「该时段涉及」：订阅 = 日志出现过的 subscription_id ∪ 我域内进行中；
+      // 充值 = 我域内且 paid_at ∈ [from,to)。未标域默认藏（仅「涉及我日志」的订阅例外）。
       const { quotaToUsdStr, qpuAt } = await import("@new-api-key-usage/core");
+      const myDomains = new Set<string>();
+      for (const k of allKeys) {
+        if (k.billing_domain) myDomains.add(k.billing_domain);
+      }
       const subRows = await repos.subscriptions.listAll();
       const usedSubIds = new Set(
         rows.map((x) => x.subscription_id).filter((v): v is number => v != null),
@@ -172,8 +177,11 @@ export function memberViewRoutes() {
           s.period_end > new Date() ||
           (s.period_start <= range.to &&
             (s.period_end ?? new Date()) >= range.from);
-        const involved = usedSubIds.has(s.subscription_id) || ongoing;
-        if (!involved) continue;
+        const involved = usedSubIds.has(s.subscription_id);
+        const inMyDomain =
+          s.billing_domain != null && myDomains.has(s.billing_domain);
+        // 涉及我日志的始终可见（事实直连）；其余仅我域内进行中可见
+        if (!involved && !(ongoing && inMyDomain)) continue;
         const qpu = qpuAt(s.paid_at ?? s.created_at, timeline);
         subscriptionsOut.push({
           id: s.id,
@@ -184,6 +192,7 @@ export function memberViewRoutes() {
           quota_usd: quotaToUsdStr(s.quota_granted, qpu),
           paid_amount: s.paid_amount,
           paid_at: toUnixSec(s.paid_at),
+          billing_domain: s.billing_domain,
           remark: s.remark,
           created_at: toUnixSec(s.created_at)!,
         });
@@ -191,6 +200,7 @@ export function memberViewRoutes() {
       const topupRows = await repos.topups.listAll();
       const topupsOut = [];
       for (const t of topupRows) {
+        if (t.billing_domain == null || !myDomains.has(t.billing_domain)) continue;
         if (!(t.paid_at >= range.from && t.paid_at < range.to)) continue;
         const qpu = qpuAt(t.paid_at, timeline);
         const quota_derived = Math.round(t.amount * qpu);
@@ -204,6 +214,7 @@ export function memberViewRoutes() {
           payment_provider: t.payment_provider,
           status: t.status,
           paid_at: toUnixSec(t.paid_at)!,
+          billing_domain: t.billing_domain,
           quota_derived,
           quota_usd: quotaToUsdStr(quota_derived, qpu),
           remark: t.remark,

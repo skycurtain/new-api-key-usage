@@ -439,7 +439,7 @@ watch(
           <span>{{ payModalPayment.remark }}</span>
         </div>
         <div class="member-logs__foot">
-          支付参数对成员完全公开；币种由成员与作者约定
+          支付参数在你所属账本域内公开；币种由成员与作者约定
         </div>
       </div>
       <div v-else class="member-logs__note">该订阅无登记信息</div>

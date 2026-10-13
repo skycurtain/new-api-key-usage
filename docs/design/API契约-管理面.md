@@ -119,12 +119,13 @@
 
 ### GET `/api/admin/keys` → 200 `[key]`
 
-全量直返（基数 10–25，不分页——§10 裁定 3）。筛选参数：`member_id`（id 或 `unassigned`）、`status`、`recent_failed=true`（引擎最近轮次失败）。排序默认数据截止降序（前端事）。
+全量直返（基数 10–25，不分页——§10 裁定 3）。筛选参数：`member_id`（id 或 `unassigned`）、`status`、`billing_domain`（值或 `none` = 未标注）、`recent_failed=true`（引擎最近轮次失败）。排序默认数据截止降序（前端事）。
 
 ```json
 {
   "id": 5, "token_name": "小张-01", "status": "active",
   "member_id": 1, "member_name": "小张",
+  "billing_domain": "carpool",
   "registered_at": "2026-09-20T10:00:00Z",
   "log_synced_at": "2026-10-02T08:00:00Z", "usage_synced_at": "2026-10-02T08:00:00Z",
   "total_used": 600000, "total_available": 940000, "total_granted": 1540000,
@@ -136,7 +137,7 @@
 
 ### POST `/api/admin/keys` → 201 `key`
 
-`{ "sk_key": "sk-…", "member_id": null }`——登记四态：
+`{ "sk_key": "sk-…", "member_id": null, "billing_domain": null }`——登记四态：
 
 | 结果 | 响应 |
 |------|------|
@@ -147,7 +148,7 @@
 
 ### PATCH `/api/admin/keys/:id` → 200 `key`
 
-`{ "status": "disabled" }`（启用 / 停用）或 `{ "member_id": 3 }`（归属变更；`null` = 归还未归属）——部分更新，单字段或并存均可，审计按实际变更字段各落一行（§9 枚举）。非法值 `422`；key 不存在 `404`；`member_id` 引用不存在成员 `422`（`fields`）。
+`{ "status": "disabled" }`（启用 / 停用）· `{ "member_id": 3 }`（归属变更；`null` = 归还未归属）或 `{ "billing_domain": "office" }`（账本域变更；`null` = 未标域）——部分更新，单字段或并存均可，审计按实际变更字段各落一行（§9 枚举）。非法值 `422`；key 不存在 `404`；`member_id` 引用不存在成员 `422`（`fields`）。
 
 ## 6. 日志明细（管理面下钻）
 
@@ -184,6 +185,7 @@
   "period_start": "2026-09-01T00:00:00Z", "period_end": "2026-10-01T00:00:00Z",
   "quota_granted": 12500000, "quota_usd": "25.00",
   "paid_amount": 170, "paid_at": "2026-08-28T10:00:00Z",
+  "billing_domain": "carpool",
   "remark": "九月拼车", "created_at": "2026-09-02T12:00:00Z"
 }
 ```
@@ -193,7 +195,7 @@
 
 ### POST `/api/admin/subscriptions` → 201 `subscription`
 
-必填：`subscription_id` · `period_start` · `quota_granted`；可空：`period_end`（=进行中）· `paid_amount` · `paid_at` · `remark`。美元双输入为前端换算，落库恒原始 quota。
+必填：`subscription_id` · `period_start` · `quota_granted`；可空：`period_end`（=进行中）· `paid_amount` · `paid_at` · `billing_domain` · `remark`。美元双输入为前端换算，落库恒原始 quota。列表筛选支持 `billing_domain`（值或 `none`）。
 
 ### PUT `/api/admin/subscriptions/:id` / DELETE → 204
 
@@ -209,6 +211,7 @@
   "payment_method": "alipay", "payment_provider": "epay",
   "status": "success",
   "paid_at": "2026-10-09T12:22:56Z",
+  "billing_domain": "carpool",
   "quota_derived": 500000, "quota_usd": "1.00",
   "remark": "", "created_at": "2026-10-09T13:00:00Z"
 }
@@ -218,7 +221,7 @@
 
 ### POST `/api/admin/topups` → 201 `topup`
 
-必填：`paid_at` · `amount` · `money`；可空：`upstream_id` · `trade_no` · `payment_method` · `payment_provider` · `status` · `remark`。
+必填：`paid_at` · `amount` · `money`；可空：`upstream_id` · `trade_no` · `payment_method` · `payment_provider` · `status` · `billing_domain` · `remark`。列表筛选支持 `billing_domain`（值或 `none`）。
 
 ### PUT `/api/admin/topups/:id` / DELETE → 204
 

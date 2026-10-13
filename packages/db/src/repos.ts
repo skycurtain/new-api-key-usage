@@ -115,6 +115,7 @@ export function createRepos(db: Db) {
       async listAll(filter?: {
         member_id?: number | "unassigned";
         status?: string;
+        billing_domain?: string | "none";
       }): Promise<KeyListRow[]> {
         const conds = [];
         if (filter?.member_id === "unassigned") {
@@ -125,6 +126,11 @@ export function createRepos(db: Db) {
         if (filter?.status) {
           conds.push(eq(apiKeys.status, filter.status));
         }
+        if (filter?.billing_domain === "none") {
+          conds.push(isNull(apiKeys.billing_domain));
+        } else if (filter?.billing_domain) {
+          conds.push(eq(apiKeys.billing_domain, filter.billing_domain));
+        }
         const base = db
           .select({
             id: apiKeys.id,
@@ -132,6 +138,7 @@ export function createRepos(db: Db) {
             key_ciphertext: apiKeys.key_ciphertext,
             status: apiKeys.status,
             member_id: apiKeys.member_id,
+            billing_domain: apiKeys.billing_domain,
             registered_at: apiKeys.registered_at,
             log_synced_at: apiKeys.log_synced_at,
             usage_synced_at: apiKeys.usage_synced_at,
@@ -220,6 +227,7 @@ export function createRepos(db: Db) {
         key_hash: string;
         key_ciphertext: Uint8Array;
         member_id: number | null;
+        billing_domain?: string | null;
         token_name?: string;
       }): Promise<ApiKeyRow> {
         const [row] = await db
@@ -228,6 +236,7 @@ export function createRepos(db: Db) {
             key_hash: values.key_hash,
             key_ciphertext: values.key_ciphertext,
             member_id: values.member_id,
+            billing_domain: values.billing_domain ?? null,
             token_name: values.token_name ?? "",
           })
           .returning();
@@ -404,11 +413,23 @@ export function createRepos(db: Db) {
     },
 
     subscriptions: {
-      async listAll(): Promise<SubscriptionRow[]> {
-        return db
+      async listAll(filter?: {
+        billing_domain?: string | "none";
+      }): Promise<SubscriptionRow[]> {
+        const conds = [];
+        if (filter?.billing_domain === "none") {
+          conds.push(isNull(subscriptions.billing_domain));
+        } else if (filter?.billing_domain) {
+          conds.push(eq(subscriptions.billing_domain, filter.billing_domain));
+        }
+        const base = db
           .select()
           .from(subscriptions)
           .orderBy(desc(subscriptions.period_start));
+        if (conds.length > 0) {
+          return base.where(and(...conds));
+        }
+        return base;
       },
       async findById(id: number): Promise<SubscriptionRow | null> {
         const rows = await db
@@ -451,8 +472,20 @@ export function createRepos(db: Db) {
     },
 
     topups: {
-      async listAll(): Promise<TopupRow[]> {
-        return db.select().from(topups).orderBy(desc(topups.paid_at));
+      async listAll(filter?: {
+        billing_domain?: string | "none";
+      }): Promise<TopupRow[]> {
+        const conds = [];
+        if (filter?.billing_domain === "none") {
+          conds.push(isNull(topups.billing_domain));
+        } else if (filter?.billing_domain) {
+          conds.push(eq(topups.billing_domain, filter.billing_domain));
+        }
+        const base = db.select().from(topups).orderBy(desc(topups.paid_at));
+        if (conds.length > 0) {
+          return base.where(and(...conds));
+        }
+        return base;
       },
       async findById(id: number): Promise<TopupRow | null> {
         const rows = await db

@@ -44,6 +44,7 @@ export const apiKeys = pgTable(
     member_id: bigint("member_id", { mode: "number" }).references(
       () => members.id,
     ),
+    billing_domain: text("billing_domain"),
     registered_at: timestamp("registered_at", {
       withTimezone: true,
       mode: "date",
@@ -135,6 +136,7 @@ export const subscriptions = pgTable(
       mode: "number",
     }),
     paid_at: timestamp("paid_at", { withTimezone: true, mode: "date" }),
+    billing_domain: text("billing_domain"),
     remark: text("remark").notNull().default(""),
     created_at: timestamp("created_at", {
       withTimezone: true,
@@ -161,6 +163,7 @@ export const topups = pgTable("topups", {
   payment_provider: text("payment_provider"),
   status: text("status"),
   paid_at: timestamp("paid_at", { withTimezone: true, mode: "date" }).notNull(),
+  billing_domain: text("billing_domain"),
   remark: text("remark").notNull().default(""),
   created_at: timestamp("created_at", {
     withTimezone: true,

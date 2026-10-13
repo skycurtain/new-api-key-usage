@@ -16,6 +16,7 @@ import type {
   PlatformTopup,
 } from "@/api/admin/platform.ts";
 import {
+  useBillingDomainOptions,
   useCreateSubscription,
   useCreateTopup,
   useQpuLatest,
@@ -78,6 +79,8 @@ const registeredTopIds = computed(
       .filter((v): v is number => v != null),
 );
 
+const domainOptions = useBillingDomainOptions();
+
 const subForm = reactive({
   subscription_id: null as number | null,
   period_start: null as Dayjs | null,
@@ -87,6 +90,7 @@ const subForm = reactive({
   quota_usd: null as number | null,
   paid_amount: null as number | null,
   paid_at: null as Dayjs | null,
+  billing_domain: "",
   remark: "",
 });
 
@@ -98,6 +102,7 @@ const topForm = reactive({
   payment_method: "",
   payment_provider: "",
   paid_at: null as Dayjs | null,
+  billing_domain: "",
   remark: "",
 });
 
@@ -111,6 +116,7 @@ function resetSub() {
     quota_usd: null,
     paid_amount: null,
     paid_at: null,
+    billing_domain: "",
     remark: "",
   });
 }
@@ -124,6 +130,7 @@ function resetTop() {
     payment_method: "",
     payment_provider: "",
     paid_at: null,
+    billing_domain: "",
     remark: "",
   });
 }
@@ -147,6 +154,7 @@ watch(
       subForm.paid_amount = s.paid_amount;
       subForm.paid_at =
         s.paid_at != null ? unixToBeijingWall(s.paid_at) : null;
+      subForm.billing_domain = s.billing_domain ?? "";
       subForm.remark = s.remark;
     } else {
       // 订阅的 paid_at 是「套餐付款时刻」，可空——不默认填今天
@@ -162,6 +170,7 @@ watch(
       topForm.payment_method = t.payment_method ?? "";
       topForm.payment_provider = t.payment_provider ?? "";
       topForm.paid_at = unixToBeijingWall(t.paid_at);
+      topForm.billing_domain = t.billing_domain ?? "";
       topForm.remark = t.remark;
     } else {
       resetTop();
@@ -239,6 +248,7 @@ async function onSubmit() {
         quota_granted: quota,
         paid_amount: subForm.paid_amount,
         paid_at: iso(subForm.paid_at),
+        billing_domain: subForm.billing_domain.trim() || null,
         remark: subForm.remark,
       };
       if (props.editingSub) {
@@ -268,6 +278,7 @@ async function onSubmit() {
         payment_provider: topForm.payment_provider || null,
         status: props.editingTop?.status ?? "success",
         paid_at: iso(topForm.paid_at)!,
+        billing_domain: topForm.billing_domain.trim() || null,
         remark: topForm.remark,
       };
       if (props.editingTop) {
@@ -381,6 +392,13 @@ async function onSubmit() {
           社交层付款事实：金额数值、币种由你们约定；未知可留空。登记时刻由系统另记
         </div>
       </a-form-item>
+      <a-form-item label="账本域">
+        <a-auto-complete
+          v-model:value="subForm.billing_domain"
+          :options="domainOptions"
+          allow-clear
+        />
+      </a-form-item>
       <a-form-item label="备注">
         <a-input v-model:value="subForm.remark" />
       </a-form-item>
@@ -430,6 +448,13 @@ async function onSubmit() {
           v-model:value="topForm.payment_provider"
           placeholder="provider"
           style="width: 120px; margin-left: 8px"
+        />
+      </a-form-item>
+      <a-form-item label="账本域">
+        <a-auto-complete
+          v-model:value="topForm.billing_domain"
+          :options="domainOptions"
+          allow-clear
         />
       </a-form-item>
       <a-form-item label="备注">

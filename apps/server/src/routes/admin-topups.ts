@@ -36,6 +36,7 @@ function toTopupItem(row: TopupRow, qpu: number): TopupItem {
     paid_at: toUnixSec(row.paid_at)!,
     quota_derived,
     quota_usd: quotaToUsdStr(quota_derived, qpu),
+    billing_domain: row.billing_domain,
     remark: row.remark,
     created_at: toUnixSec(row.created_at)!,
   };
@@ -53,6 +54,7 @@ function parseTopupBody(body: z.infer<typeof createTopupBodySchema>):
         payment_provider: string | null;
         status: string | null;
         paid_at: Date;
+        billing_domain: string | null;
         remark: string;
       };
     } {
@@ -71,6 +73,10 @@ function parseTopupBody(body: z.infer<typeof createTopupBodySchema>):
       payment_provider: body.payment_provider ?? null,
       status: body.status ?? "success",
       paid_at: new Date(body.paid_at),
+      billing_domain:
+        typeof body.billing_domain === "string" && body.billing_domain.trim()
+          ? body.billing_domain.trim()
+          : null,
       remark: body.remark ?? "",
     },
   };
@@ -87,6 +93,11 @@ export function adminTopupRoutes() {
       summary: "充值入账清单",
       tags: ["支付记录"],
       security: [{ adminSession: [] }],
+      request: {
+        query: z.object({
+          billing_domain: z.string().optional(),
+        }),
+      },
       responses: {
         200: {
           description: "topup 数组",
@@ -100,7 +111,14 @@ export function adminTopupRoutes() {
     async (c) => {
       const repos = c.get("repos");
       const timeline = resolveQpuTimeline(await repos.qpu.listTimeline());
-      const rows = await repos.topups.listAll();
+      const q = c.req.query();
+      const filter =
+        q.billing_domain === "none"
+          ? { billing_domain: "none" as const }
+          : q.billing_domain
+            ? { billing_domain: q.billing_domain }
+            : undefined;
+      const rows = await repos.topups.listAll(filter);
       return c.json(
         rows.map((row) => toTopupItem(row, qpuAt(row.paid_at, timeline))),
         200,
