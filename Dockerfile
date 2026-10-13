@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates libstdc++6 \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY release/naku-server release/naku-engine release/naku-migrate /app/
+# --chmod：Windows 打包 / 跨机传输常丢可执行位，缺 x 时容器内 exec 以 126 退出
+COPY --chmod=755 release/naku-server release/naku-engine release/naku-migrate /app/
 COPY release/drizzle /app/drizzle
 ENV MIGRATIONS_FOLDER=/app/drizzle
 CMD ["/app/naku-server"]
