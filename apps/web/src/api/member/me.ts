@@ -1,6 +1,5 @@
 import type {
-  LogItem,
-  Paginated,
+  LogPage,
   SubscriptionItem,
   TopupItem,
   UnixSec,
@@ -55,11 +54,12 @@ export type MemberLogQuery = {
   api_key_id?: number;
   billing_source?: string;
   subscription_id?: number;
+  model_name?: string;
   type?: number | "error";
 };
 
-export async function fetchLogs(query: MemberLogQuery): Promise<Paginated<LogItem>> {
-  const { data } = await memberHttp.get<Paginated<LogItem>>("/logs", {
+export async function fetchLogs(query: MemberLogQuery): Promise<LogPage> {
+  const { data } = await memberHttp.get<LogPage>("/logs", {
     params: query,
   });
   return data;

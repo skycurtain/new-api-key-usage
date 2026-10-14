@@ -1,4 +1,4 @@
-import type { LogItem, Paginated } from "@new-api-key-usage/core";
+import type { LogPage } from "@new-api-key-usage/core";
 import { adminHttp } from "../http.ts";
 
 export type AdminLogFilters = {
@@ -10,13 +10,12 @@ export type AdminLogFilters = {
   member_id?: number | "unassigned";
   billing_source?: string;
   subscription_id?: number;
+  model_name?: string;
   type?: number | "error";
 };
 
-export async function fetchLogs(
-  params: AdminLogFilters,
-): Promise<Paginated<LogItem>> {
-  const { data } = await adminHttp.get<Paginated<LogItem>>("/logs", {
+export async function fetchLogs(params: AdminLogFilters): Promise<LogPage> {
+  const { data } = await adminHttp.get<LogPage>("/logs", {
     params,
   });
   return data;

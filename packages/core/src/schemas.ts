@@ -68,9 +68,19 @@ export const logItem = z.object({
   raw: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const logPageSummary = z.object({
+  hit_count: z.number().int(),
+  usage_count: z.number().int(),
+  error_count: z.number().int(),
+  quota: z.number(),
+  quota_usd: z.string(),
+});
+
 export const logPage = z.object({
   items: z.array(logItem),
   total: z.number().int(),
+  summary: logPageSummary,
+  models: z.array(z.string()),
 });
 
 export const keyItem = z.object({

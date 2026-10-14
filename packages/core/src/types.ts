@@ -114,6 +114,21 @@ export interface Paginated<T> {
   total: number;
 }
 
+/** 日志页汇总：条数跟全部筛选；用量恒 type=2 + 其余筛选 */
+export interface LogPageSummary {
+  hit_count: number;
+  usage_count: number;
+  error_count: number;
+  quota: Quota;
+  quota_usd: QuotaUsd;
+}
+
+/** 调用日志分页响应（含汇总条与模型下拉选项） */
+export interface LogPage extends Paginated<LogItem> {
+  summary: LogPageSummary;
+  models: string[];
+}
+
 export interface EngineLastRound {
   started_at: UnixSec;
   keys_total: number;

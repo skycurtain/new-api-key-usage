@@ -152,9 +152,30 @@
 
 ## 6. 日志明细（管理面下钻）
 
-### GET `/api/admin/logs?from&to` → 200 `{items, total}`
+### GET `/api/admin/logs?from&to` → 200 `{items, total, summary, models}`
 
-分页（`page/page_size`，公共约定 §6）。过滤：`from/to`（必填）、`api_key_id`、`member_id`（经 `api_key_id → api_keys.member_id` 联查**当前归属**——行级归属语义）、`billing_source`、`subscription_id`、`type`。默认全类型（错误行排查入口——§10 裁定 1 的另一半）。
+分页（`page/page_size`，公共约定 §6）。过滤：`from/to`（必填）、`api_key_id`、`member_id`（经 `api_key_id → api_keys.member_id` 联查**当前归属**——行级归属语义）、`model_name`、`billing_source`、`subscription_id`、`type`。默认全类型（错误行排查入口——§10 裁定 1 的另一半）。
+
+**响应附加块**（汇总条与模型下拉的数据源；成员端 `/api/member/logs` 同构）：
+
+```json
+{
+  "summary": {
+    "hit_count": 131, "usage_count": 128, "error_count": 3,
+    "quota": 1250000, "quota_usd": "2.50"
+  },
+  "models": ["claude-sonnet-4", "gpt-5"]
+}
+```
+
+| 字段 | 口径 |
+|------|------|
+| `hit_count` | 当前筛选命中总数（= `total`；界面文案「请求次数」） |
+| `usage_count` / `error_count` | 同筛选下 `type=2` / `type≠2` 条数 |
+| `quota` / `quota_usd` | 同筛选下 **type=2** 行合计；美元按行 QPU 微分（公共约定 §5） |
+| `models` | 时间窗 + 主体/来源/订阅筛选下去重 `model_name`（**不含** `model_name` / `type`），升序，供筛选下拉 |
+
+裁定：条数跟全部筛选（含 `type` / `model_name`）；用量字段恒 `type = 2`（即使请求 `type=error`）——界面标签「消费用量」。
 
 ```json
 {

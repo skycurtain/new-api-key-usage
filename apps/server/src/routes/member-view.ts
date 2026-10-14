@@ -241,7 +241,8 @@ export function memberViewRoutes() {
       method: "get",
       path: "/logs",
       summary: "日志明细（名下 key）",
-      description: "分页；默认全类型（可 type 筛）；DTO 与管理面同构",
+      description:
+        "分页；默认全类型（可 type / model_name 筛）；DTO 与管理面同构；附带 summary 与 models",
       tags: ["成员视图"],
       security: [{ memberToken: [] }],
       request: {
@@ -253,12 +254,13 @@ export function memberViewRoutes() {
           api_key_id: z.string().optional(),
           billing_source: z.string().optional(),
           subscription_id: z.string().optional(),
+          model_name: z.string().optional(),
           type: z.string().optional(),
         }),
       },
       responses: {
         200: {
-          description: "items/total",
+          description: "items/total/summary/models",
           content: { "application/json": { schema: logPageSchema } },
         },
         401: err401,
@@ -278,25 +280,33 @@ export function memberViewRoutes() {
       );
       const repos = c.get("repos");
       const timeline = resolveQpuTimeline(await repos.qpu.listTimeline());
-      const { rows, total } = await repos.logs.listMemberPage({
-        member_id: c.get("memberId")!,
+      const member_id = c.get("memberId")!;
+      const filters = {
+        member_id,
         from: range.from,
         to: range.to,
-        page,
-        page_size,
         api_key_id: q.api_key_id ? Number(q.api_key_id) : undefined,
         billing_source:
           q.billing_source === "none" ? "none" : q.billing_source || undefined,
         subscription_id: q.subscription_id
           ? Number(q.subscription_id)
           : undefined,
+        model_name: q.model_name || undefined,
         type:
           q.type === "error"
-            ? "error"
+            ? ("error" as const)
             : q.type != null && q.type !== ""
               ? Number(q.type)
               : undefined,
+      };
+      const { rows, total } = await repos.logs.listMemberPage({
+        ...filters,
+        page,
+        page_size,
       });
+      const sum = await repos.logs.summarizeMember(filters);
+      const usage = sumUsage(sum.usage_rows, timeline);
+      const models = await repos.logs.listMemberModels(filters);
       const items: LogItem[] = rows.map((row) => {
         const { quota_usd } = usageRowPrecise(
           row.quota,
@@ -348,7 +358,21 @@ export function memberViewRoutes() {
           },
         };
       });
-      return c.json({ items, total }, 200);
+      return c.json(
+        {
+          items,
+          total,
+          summary: {
+            hit_count: sum.hit_count,
+            usage_count: sum.usage_count,
+            error_count: sum.error_count,
+            quota: usage.quota,
+            quota_usd: usage.quota_usd,
+          },
+          models,
+        },
+        200,
+      );
     },
   );
 

@@ -279,7 +279,7 @@ export function adminUsageRoutes() {
       path: "/logs",
       summary: "日志明细（下钻）",
       description:
-        "分页；from/to 必填；默认全类型（可 type 筛）；token_name 取当前名",
+        "分页；from/to 必填；默认全类型（可 type / model_name 筛）；token_name 取当前名；附带 summary 与 models",
       tags: ["用量"],
       security: [{ adminSession: [] }],
       request: {
@@ -290,12 +290,13 @@ export function adminUsageRoutes() {
           member_id: z.string().optional(),
           billing_source: z.string().optional(),
           subscription_id: z.string().optional(),
+          model_name: z.string().optional(),
           type: z.string().optional(),
         }),
       },
       responses: {
         200: {
-          description: "items/total",
+          description: "items/total/summary/models",
           content: { "application/json": { schema: logPageSchema } },
         },
         401: err401,
@@ -312,15 +313,13 @@ export function adminUsageRoutes() {
       const page_size = Math.min(200, Math.max(1, Number(q.page_size ?? 50) || 50));
       const repos = c.get("repos");
       const timeline = resolveQpuTimeline(await repos.qpu.listTimeline());
-      const { rows, total } = await repos.logs.listPage({
+      const filters = {
         from: range.from,
         to: range.to,
-        page,
-        page_size,
         api_key_id: q.api_key_id ? Number(q.api_key_id) : undefined,
         member_id:
           q.member_id === "unassigned"
-            ? "unassigned"
+            ? ("unassigned" as const)
             : q.member_id
               ? Number(q.member_id)
               : undefined,
@@ -329,13 +328,22 @@ export function adminUsageRoutes() {
         subscription_id: q.subscription_id
           ? Number(q.subscription_id)
           : undefined,
+        model_name: q.model_name || undefined,
         type:
           q.type === "error"
-            ? "error"
+            ? ("error" as const)
             : q.type != null && q.type !== ""
               ? Number(q.type)
               : undefined,
+      };
+      const { rows, total } = await repos.logs.listPage({
+        ...filters,
+        page,
+        page_size,
       });
+      const sum = await repos.logs.summarize(filters);
+      const usage = sumUsage(sum.usage_rows, timeline);
+      const models = await repos.logs.listModels(filters);
 
       const items: LogItem[] = rows.map((row) => {
         const { quota_usd } = usageRowPrecise(
@@ -389,7 +397,21 @@ export function adminUsageRoutes() {
         };
       });
 
-      return c.json({ items, total }, 200);
+      return c.json(
+        {
+          items,
+          total,
+          summary: {
+            hit_count: sum.hit_count,
+            usage_count: sum.usage_count,
+            error_count: sum.error_count,
+            quota: usage.quota,
+            quota_usd: usage.quota_usd,
+          },
+          models,
+        },
+        200,
+      );
     },
   );
 

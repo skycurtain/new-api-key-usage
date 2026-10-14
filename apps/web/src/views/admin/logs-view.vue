@@ -9,6 +9,7 @@ import PageHeader from "@/components/common/page-header.vue";
 import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
+import LogsSummaryBar from "@/components/common/logs-summary-bar.vue";
 import {
   useLiveTimeRange,
   type RangeKind,
@@ -23,6 +24,7 @@ const { range, setRange } = useLiveTimeRange("recent-30");
 
 const memberId = ref<number | "unassigned" | null>(null);
 const apiKeyId = ref<number | null>(null);
+const modelFilter = ref<string | null>(null);
 const billingSource = ref<string | null>(null);
 const subscriptionId = ref<number | null>(null);
 const typeFilter = ref<number | "error" | null>(null);
@@ -50,6 +52,7 @@ const params = computed(() => ({
   page_size: pageSize.value,
   api_key_id: apiKeyId.value ?? undefined,
   member_id: memberId.value ?? undefined,
+  model_name: modelFilter.value ?? undefined,
   billing_source: billingSource.value ?? undefined,
   subscription_id: subscriptionId.value ?? undefined,
   type: typeFilter.value ?? undefined,
@@ -58,6 +61,11 @@ const params = computed(() => ({
 const logsQuery = useAdminLogs(() => params.value);
 const rows = computed(() => logsQuery.data.value?.items ?? []);
 const total = computed(() => logsQuery.data.value?.total ?? 0);
+const summary = computed(() => logsQuery.data.value?.summary);
+const modelOptions = computed(() => [
+  { value: null, label: "全部模型" },
+  ...(logsQuery.data.value?.models ?? []).map((m) => ({ value: m, label: m })),
+]);
 
 const memberOptions = computed(() => [
   { value: null, label: "全部成员" },
@@ -105,6 +113,8 @@ function syncFromRoute() {
   else if (typeof m === "string" && m) memberId.value = Number(m);
   const k = q.api_key_id ?? q.key_id;
   if (typeof k === "string" && k) apiKeyId.value = Number(k);
+  modelFilter.value =
+    typeof q.model_name === "string" && q.model_name ? q.model_name : null;
   if (typeof q.billing_source === "string" && q.billing_source) {
     billingSource.value = q.billing_source;
   }
@@ -131,6 +141,7 @@ function pushQuery() {
   if (memberId.value === "unassigned") query.member_id = "unassigned";
   else if (memberId.value != null) query.member_id = String(memberId.value);
   if (apiKeyId.value != null) query.api_key_id = String(apiKeyId.value);
+  if (modelFilter.value) query.model_name = modelFilter.value;
   if (billingSource.value) query.billing_source = billingSource.value;
   if (subscriptionId.value != null) {
     query.subscription_id = String(subscriptionId.value);
@@ -146,7 +157,7 @@ watch(
   () => syncFromRoute(),
 );
 watch(
-  [memberId, apiKeyId, billingSource, subscriptionId, typeFilter],
+  [memberId, apiKeyId, modelFilter, billingSource, subscriptionId, typeFilter],
   () => {
     page.value = 1;
     pushQuery();
@@ -246,6 +257,15 @@ onUnmounted(() => {
         option-filter-prop="label"
       />
       <a-select
+        v-model:value="modelFilter"
+        :options="modelOptions"
+        style="width: 140px"
+        allow-clear
+        placeholder="模型"
+        show-search
+        option-filter-prop="label"
+      />
+      <a-select
         v-model:value="billingSource"
         :options="[
           { value: null, label: '全部来源' },
@@ -275,6 +295,15 @@ onUnmounted(() => {
         placeholder="类型"
       />
     </div>
+
+    <LogsSummaryBar
+      :hit-count="summary?.hit_count ?? 0"
+      :usage-count="summary?.usage_count ?? 0"
+      :error-count="summary?.error_count ?? 0"
+      :quota="summary?.quota ?? 0"
+      :quota-usd="summary?.quota_usd ?? '0.00'"
+      :loading="logsQuery.isPending.value || logsQuery.isFetching.value"
+    />
 
     <TableRefresh
       :loading="logsQuery.isFetching.value"

@@ -32,6 +32,50 @@ export interface KeyListRow extends ApiKeyRow {
   member_name: string | null;
 }
 
+type LogFilterParams = {
+  from: Date;
+  to: Date;
+  api_key_id?: number;
+  member_id?: number | "unassigned";
+  billing_source?: string | "none";
+  subscription_id?: number;
+  model_name?: string;
+  type?: number | "error";
+};
+
+/** 明细/汇总共用的 WHERE 片段（时间左闭右开；联 api_keys 时才带 member 归属） */
+function buildLogConds(params: LogFilterParams) {
+  const conds = [
+    gte(usageLogs.created_at, params.from),
+    lt(usageLogs.created_at, params.to),
+  ];
+  if (params.api_key_id != null) {
+    conds.push(eq(usageLogs.api_key_id, params.api_key_id));
+  }
+  if (params.billing_source === "none") {
+    conds.push(isNull(usageLogs.billing_source));
+  } else if (params.billing_source) {
+    conds.push(eq(usageLogs.billing_source, params.billing_source));
+  }
+  if (params.subscription_id != null) {
+    conds.push(eq(usageLogs.subscription_id, params.subscription_id));
+  }
+  if (params.model_name) {
+    conds.push(eq(usageLogs.model_name, params.model_name));
+  }
+  if (params.type === "error") {
+    conds.push(ne(usageLogs.type, 2));
+  } else if (typeof params.type === "number") {
+    conds.push(eq(usageLogs.type, params.type));
+  }
+  if (params.member_id === "unassigned") {
+    conds.push(isNull(apiKeys.member_id));
+  } else if (params.member_id != null) {
+    conds.push(eq(apiKeys.member_id, params.member_id));
+  }
+  return conds;
+}
+
 /**
  * 仓储层（R14）：数据访问只出现在 packages/db。
  * apps/server 不 import drizzle-orm / postgres 驱动。
@@ -557,35 +601,12 @@ export function createRepos(db: Db) {
         member_id?: number | "unassigned";
         billing_source?: string | "none";
         subscription_id?: number;
+        model_name?: string;
         type?: number | "error";
         page: number;
         page_size: number;
       }): Promise<{ rows: Array<UsageLogRow & { token_name: string }>; total: number }> {
-        const conds = [
-          gte(usageLogs.created_at, params.from),
-          lt(usageLogs.created_at, params.to),
-        ];
-        if (params.api_key_id != null) {
-          conds.push(eq(usageLogs.api_key_id, params.api_key_id));
-        }
-        if (params.billing_source === "none") {
-          conds.push(isNull(usageLogs.billing_source));
-        } else if (params.billing_source) {
-          conds.push(eq(usageLogs.billing_source, params.billing_source));
-        }
-        if (params.subscription_id != null) {
-          conds.push(eq(usageLogs.subscription_id, params.subscription_id));
-        }
-        if (params.type === "error") {
-          conds.push(ne(usageLogs.type, 2));
-        } else if (typeof params.type === "number") {
-          conds.push(eq(usageLogs.type, params.type));
-        }
-        if (params.member_id === "unassigned") {
-          conds.push(isNull(apiKeys.member_id));
-        } else if (params.member_id != null) {
-          conds.push(eq(apiKeys.member_id, params.member_id));
-        }
+        const conds = buildLogConds(params);
 
         const totalRows = await db
           .select({ n: count() })
@@ -705,29 +726,10 @@ export function createRepos(db: Db) {
         api_key_id?: number;
         billing_source?: string | "none";
         subscription_id?: number;
+        model_name?: string;
         type?: number | "error";
       }) {
-        const conds = [
-          eq(apiKeys.member_id, params.member_id),
-          gte(usageLogs.created_at, params.from),
-          lt(usageLogs.created_at, params.to),
-        ];
-        if (params.type === "error") {
-          conds.push(ne(usageLogs.type, 2));
-        } else if (typeof params.type === "number") {
-          conds.push(eq(usageLogs.type, params.type));
-        }
-        if (params.api_key_id != null) {
-          conds.push(eq(usageLogs.api_key_id, params.api_key_id));
-        }
-        if (params.billing_source === "none") {
-          conds.push(isNull(usageLogs.billing_source));
-        } else if (params.billing_source) {
-          conds.push(eq(usageLogs.billing_source, params.billing_source));
-        }
-        if (params.subscription_id != null) {
-          conds.push(eq(usageLogs.subscription_id, params.subscription_id));
-        }
+        const conds = buildLogConds({ ...params, member_id: params.member_id });
         const totalRows = await db
           .select({ n: count() })
           .from(usageLogs)
@@ -770,6 +772,122 @@ export function createRepos(db: Db) {
           .limit(params.page_size)
           .offset((params.page - 1) * params.page_size);
         return { rows, total };
+      },
+
+      /**
+       * 日志页汇总：条数跟全部筛选；用量行恒 type=2（不含 type 筛选）。
+       * usage_rows 交上层 sumUsage 做按行 QPU 微分。
+       */
+      async summarize(params: LogFilterParams) {
+        const fullConds = buildLogConds(params);
+        const usageConds = buildLogConds({ ...params, type: 2 });
+
+        const hitRows = await db
+          .select({
+            hit_count: count(),
+            usage_count: sql<number>`count(*) filter (where ${usageLogs.type} = 2)`,
+            error_count: sql<number>`count(*) filter (where ${usageLogs.type} != 2)`,
+          })
+          .from(usageLogs)
+          .leftJoin(apiKeys, eq(usageLogs.api_key_id, apiKeys.id))
+          .where(and(...fullConds));
+        const hit = hitRows[0] ?? {
+          hit_count: 0,
+          usage_count: 0,
+          error_count: 0,
+        };
+
+        const usage_rows = await db
+          .select({
+            quota: usageLogs.quota,
+            created_at: usageLogs.created_at,
+          })
+          .from(usageLogs)
+          .leftJoin(apiKeys, eq(usageLogs.api_key_id, apiKeys.id))
+          .where(and(...usageConds));
+
+        return {
+          hit_count: Number(hit.hit_count) || 0,
+          usage_count: Number(hit.usage_count) || 0,
+          error_count: Number(hit.error_count) || 0,
+          usage_rows,
+        };
+      },
+
+      async summarizeMember(params: LogFilterParams & { member_id: number }) {
+        const fullConds = buildLogConds({ ...params, member_id: params.member_id });
+        const usageConds = buildLogConds({
+          ...params,
+          member_id: params.member_id,
+          type: 2,
+        });
+
+        const hitRows = await db
+          .select({
+            hit_count: count(),
+            usage_count: sql<number>`count(*) filter (where ${usageLogs.type} = 2)`,
+            error_count: sql<number>`count(*) filter (where ${usageLogs.type} != 2)`,
+          })
+          .from(usageLogs)
+          .innerJoin(apiKeys, eq(usageLogs.api_key_id, apiKeys.id))
+          .where(and(...fullConds));
+        const hit = hitRows[0] ?? {
+          hit_count: 0,
+          usage_count: 0,
+          error_count: 0,
+        };
+
+        const usage_rows = await db
+          .select({
+            quota: usageLogs.quota,
+            created_at: usageLogs.created_at,
+          })
+          .from(usageLogs)
+          .innerJoin(apiKeys, eq(usageLogs.api_key_id, apiKeys.id))
+          .where(and(...usageConds));
+
+        return {
+          hit_count: Number(hit.hit_count) || 0,
+          usage_count: Number(hit.usage_count) || 0,
+          error_count: Number(hit.error_count) || 0,
+          usage_rows,
+        };
+      },
+
+      /** 模型下拉选项：时间窗 + 主体/来源/订阅筛选下去重（不含 model_name / type） */
+      async listModels(
+        params: Omit<LogFilterParams, "type" | "model_name">,
+      ): Promise<string[]> {
+        const conds = buildLogConds({ ...params, type: undefined, model_name: undefined });
+        const rows = await db
+          .select({ model_name: usageLogs.model_name })
+          .from(usageLogs)
+          .leftJoin(apiKeys, eq(usageLogs.api_key_id, apiKeys.id))
+          .where(and(...conds))
+          .groupBy(usageLogs.model_name)
+          .orderBy(asc(usageLogs.model_name));
+        return rows.map((r) => r.model_name).filter((m) => m !== "");
+      },
+
+      async listMemberModels(
+        params: Omit<LogFilterParams, "type" | "model_name"> & {
+          member_id: number;
+        },
+      ): Promise<string[]> {
+        const conds = buildLogConds({
+          ...params,
+          member_id: params.member_id,
+          type: undefined,
+          model_name: undefined,
+        });
+        const rows = await db
+          .select({ model_name: usageLogs.model_name })
+          .from(usageLogs)
+          .innerJoin(apiKeys, eq(usageLogs.api_key_id, apiKeys.id))
+          .where(and(...conds))
+          .groupBy(usageLogs.model_name)
+          .orderBy(asc(usageLogs.model_name));
+        return rows.map((r) => r.model_name).filter((m) => m !== "");
       },
     },
 

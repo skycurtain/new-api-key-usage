@@ -67,11 +67,13 @@
 
 ## 4. 日志明细
 
-### GET `/api/member/logs?from&to` → 200 `{items, total}`
+### GET `/api/member/logs?from&to` → 200 `{items, total, summary, models}`
 
 分页（公共约定 §6）；过滤 `from/to`（必填）；范围恒为名下 key；**默认全类型**（消费 + 错误，可 `type` 筛——2 / `error`）。
 
-可选筛选（调用日志页，与管理面 `GET /api/admin/logs` 同名同义）：`api_key_id` · `billing_source`（`subscription` / `wallet` / `none`）· `subscription_id` · `type`（2 / `error`）。
+可选筛选（调用日志页，与管理面 `GET /api/admin/logs` 同名同义）：`api_key_id` · `model_name` · `billing_source`（`subscription` / `wallet` / `none`）· `subscription_id` · `type`（2 / `error`）。
+
+响应附带 `summary` / `models`（与管理面同构，见《API契约-管理面》§6）：`summary` 为当前筛选下条数与 **type=2** 消费用量；`models` 为时间窗 + 主体筛选下去重的模型选项（不含 `model_name` / `type` 筛选）。
 
 明细行 DTO 与管理面 `GET /api/admin/logs` **同构**（公共约定 §7——一份 DTO 类型两处复用）：
 
