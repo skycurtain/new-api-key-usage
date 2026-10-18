@@ -27,6 +27,8 @@ const subsQuery = useSubscriptions();
 const topupsQuery = useTopups();
 
 const filterDomain = ref<string | "none" | null>(null);
+const filterSubId = ref<number | null>(null);
+const filterTradeNo = ref<string | null>(null);
 const domainOptions = computed(() => {
   const set = new Set<string>();
   for (const s of subsQuery.data.value ?? []) {
@@ -39,7 +41,10 @@ const domainOptions = computed(() => {
 });
 
 const filteredSubs = computed(() => {
-  const list = subsQuery.data.value ?? [];
+  let list = subsQuery.data.value ?? [];
+  if (filterSubId.value != null) {
+    list = list.filter((r) => r.subscription_id === filterSubId.value);
+  }
   if (!filterDomain.value) return list;
   if (filterDomain.value === "none") {
     return list.filter((r) => r.billing_domain == null);
@@ -48,7 +53,15 @@ const filteredSubs = computed(() => {
 });
 
 const filteredTops = computed(() => {
-  const list = topupsQuery.data.value ?? [];
+  let list = topupsQuery.data.value ?? [];
+  if (filterTradeNo.value) {
+    const q = filterTradeNo.value.trim().toLowerCase();
+    list = list.filter(
+      (r) =>
+        (r.trade_no ?? "").toLowerCase().includes(q) ||
+        (r.upstream_id != null && String(r.upstream_id).includes(q)),
+    );
+  }
   if (!filterDomain.value) return list;
   if (filterDomain.value === "none") {
     return list.filter((r) => r.billing_domain == null);
@@ -67,18 +80,23 @@ const checking = ref(false);
 
 function syncFromRoute() {
   tab.value = route.query.tab === "topups" ? "topups" : "subs";
+  const sid = route.query.subscription_id;
+  filterSubId.value = typeof sid === "string" && sid ? Number(sid) || null : null;
+  const tn = route.query.trade_no;
+  filterTradeNo.value = typeof tn === "string" && tn ? tn : null;
 }
 
-function pushTab() {
-  void router.replace({
-    path: "/admin/payments",
-    query: tab.value === "topups" ? { tab: "topups" } : {},
-  });
+function pushQuery() {
+  const query: Record<string, string> = {};
+  if (tab.value === "topups") query.tab = "topups";
+  if (filterSubId.value != null) query.subscription_id = String(filterSubId.value);
+  if (filterTradeNo.value) query.trade_no = filterTradeNo.value;
+  void router.replace({ path: "/admin/payments", query });
 }
 
 syncFromRoute();
 watch(() => route.query, () => syncFromRoute());
-watch(tab, () => pushTab());
+watch([tab, filterSubId, filterTradeNo], () => pushQuery());
 
 const subRows = computed(() => [...filteredSubs.value]);
 const topRows = computed(() => {
@@ -231,6 +249,24 @@ watch(
     </a-tabs>
 
     <div class="payments-toolbar">
+      <template v-if="tab === 'subs'">
+        <a-input-number
+          v-model:value="filterSubId"
+          :min="1"
+          :precision="0"
+          style="width: 140px"
+          placeholder="订阅 ID"
+          allow-clear
+        />
+      </template>
+      <template v-else>
+        <a-input
+          v-model:value="filterTradeNo"
+          style="width: 180px"
+          placeholder="交易号 / 上游 ID"
+          allow-clear
+        />
+      </template>
       <a-select
         v-model:value="filterDomain"
         :options="[

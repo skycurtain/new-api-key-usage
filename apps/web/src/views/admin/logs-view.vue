@@ -3,7 +3,7 @@
  * 管理面调用日志（交互设计-调用日志）：筛选 + 明细表 + 与 key/成员跳转
  */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import type { LogItem } from "@new-api-key-usage/core";
+import type { LogItem, SubscriptionItem } from "@new-api-key-usage/core";
 import { useRoute, useRouter } from "vue-router";
 import PageHeader from "@/components/common/page-header.vue";
 import TableRefresh from "@/components/common/table-refresh.vue";
@@ -14,9 +14,9 @@ import {
   useLiveTimeRange,
   type RangeKind,
 } from "@/composables/use-live-time-range.ts";
-import { useAdminLogs, useKeys, useMembers } from "@/queries/admin.ts";
+import { useAdminLogs, useKeys, useMembers, useSubscriptions } from "@/queries/admin.ts";
 import { formatDateTime } from "@/utils/time.ts";
-import { formatInt } from "@/utils/format.ts";
+import { formatInt, formatPaidAmount } from "@/utils/format.ts";
 
 const route = useRoute();
 const router = useRouter();
@@ -167,12 +167,54 @@ watch(page, () => pushQuery());
 
 function sourceBadge(record: LogItem) {
   if (record.billing_source === "subscription" && record.subscription_id != null) {
-    return { text: `订阅 #${record.subscription_id}`, color: "blue" as const };
+    return {
+      text: `订阅 #${record.subscription_id}`,
+      color: "blue" as const,
+      kind: "sub" as const,
+      id: record.subscription_id,
+    };
   }
   if (record.billing_source === "wallet") {
-    return { text: "充值", color: "gold" as const };
+    return { text: "充值", color: "gold" as const, kind: "wallet" as const, id: null };
   }
-  return { text: "未关联", color: undefined };
+  return { text: "未关联", color: undefined, kind: "none" as const, id: null };
+}
+
+const payModalOpen = ref(false);
+const payModalSubId = ref<number | null>(null);
+const subsQuery = useSubscriptions();
+const paymentBySub = computed(() => {
+  const m = new Map<number, SubscriptionItem>();
+  for (const p of subsQuery.data.value ?? []) {
+    m.set(p.subscription_id, p);
+  }
+  return m;
+});
+const payModalPayment = computed(() =>
+  payModalSubId.value == null
+    ? undefined
+    : paymentBySub.value.get(payModalSubId.value),
+);
+
+function onBadge(record: LogItem, e: MouseEvent) {
+  e.stopPropagation();
+  if (sourceBadge(record).kind !== "sub") return;
+  payModalSubId.value = sourceBadge(record).id;
+  payModalOpen.value = true;
+}
+
+function periodText(p: SubscriptionItem): string {
+  const end = p.period_end == null ? "进行中" : formatDateTime(p.period_end);
+  return `${formatDateTime(p.period_start)} ~ ${end}`;
+}
+
+function goPayments() {
+  if (payModalSubId.value == null) return;
+  payModalOpen.value = false;
+  void router.push({
+    path: "/admin/payments",
+    query: { tab: "subs", subscription_id: String(payModalSubId.value) },
+  });
 }
 
 function goKey(keyId: number) {
@@ -354,7 +396,19 @@ onUnmounted(() => {
             </a-tag>
           </template>
           <template v-else-if="column.key === 'source'">
-            <a-tag :color="sourceBadge(record).color">
+            <a-tooltip
+              v-if="sourceBadge(record).kind === 'sub'"
+              title="点击查看该订阅支付参数"
+            >
+              <a-tag
+                color="blue"
+                class="call-logs__badge"
+                @click="(e: MouseEvent) => onBadge(record, e)"
+              >
+                {{ sourceBadge(record).text }}
+              </a-tag>
+            </a-tooltip>
+            <a-tag v-else :color="sourceBadge(record).color">
               {{ sourceBadge(record).text }}
             </a-tag>
           </template>
@@ -432,6 +486,41 @@ onUnmounted(() => {
         </div>
       </div>
     </a-modal>
+
+    <a-modal
+      v-model:open="payModalOpen"
+      :title="payModalSubId != null ? `订阅 #${payModalSubId} 支付参数` : '支付参数'"
+      :footer="null"
+      width="480"
+      centered
+      :styles="{ body: { maxHeight: '56vh', overflowY: 'auto' } }"
+    >
+      <div v-if="payModalPayment" class="call-logs__pay">
+        <div class="call-logs__kv">
+          <span class="call-logs__note">期间</span>
+          <span>{{ periodText(payModalPayment) }}</span>
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">额度</span>
+          <QuotaText
+            :quota="payModalPayment.quota_granted"
+            :quota-usd="payModalPayment.quota_usd"
+          />
+        </div>
+        <div class="call-logs__kv">
+          <span class="call-logs__note">金额</span>
+          <span class="call-logs__num">{{ formatPaidAmount(payModalPayment.paid_amount) }}</span>
+        </div>
+        <div v-if="payModalPayment.remark" class="call-logs__kv">
+          <span class="call-logs__note">备注</span>
+          <span>{{ payModalPayment.remark }}</span>
+        </div>
+      </div>
+      <div v-else class="call-logs__note">该订阅无登记信息</div>
+      <div class="call-logs__foot">
+        <a @click="goPayments">在支付记录中查看</a>
+      </div>
+    </a-modal>
   </section>
 </template>
 
@@ -507,5 +596,22 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 20px;
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+.call-logs__badge {
+  cursor: pointer;
+}
+
+.call-logs__pay {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.call-logs__foot {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  text-align: right;
 }
 </style>
