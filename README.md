@@ -161,3 +161,9 @@ docker compose ps          # migrate 应为 exited(0)，其余 running/healthy
 4. **1000 条硬上限**：窗口只保留最近 1000 条——当前日志速率下约等于 3 天；同步停摆超过窗口会永久丢数据
 5. **`TokenAuthReadOnly`**：用量/日志接口用宽松鉴权，key 过期 / 额度耗尽仍可查询；**显式禁用会被 401 拒绝**
 6. **`DisplayTokenStatEnabled` 已开启**：billing 接口返回 token 级额度
+
+## License
+
+[MIT](LICENSE) © 2026 skycurtain
+
+NAKU 是 NewAPI 的**独立客户端**，仅通过 HTTP API 交互，不包含其源码；与上游许可证相互独立。上游 NewAPI 为 AGPL-3.0，本项目不受其传染，亦不衍生自它。
