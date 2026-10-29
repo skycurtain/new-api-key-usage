@@ -88,13 +88,13 @@ bun run dev:web               # 前端 Vite（5175）
 ### 本地打包
 
 ```bash
-bun run naku pack
+bun run pack release
 # 交互选：目标平台 · 打包内容 · 是否 tar.gz
 # 产出 release/：dist · naku-server · naku-engine · naku-migrate · drizzle/
 
 # 非交互（CI / 一键）：
-bun run pack:release
-# 或 bun run naku pack --yes --target=bun-linux-arm64 --only=dist,naku-server
+bun run pack release --yes
+# 或 bun run pack release --yes --target=bun-linux-arm64 --only=dist,naku-server
 ```
 
 ### 服务器

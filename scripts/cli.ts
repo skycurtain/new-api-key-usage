@@ -1,5 +1,5 @@
 /**
- * naku 打包/构建 CLI：citty 定义命令，@clack/prompts 负责交互。
+ * pack 打包/构建 CLI：citty 定义命令，@clack/prompts 负责交互。
  * 有 TTY 且未给全 flag 时进交互；--yes / 无 TTY 则纯 flag。
  */
 import { defineCommand, runMain } from "citty";
@@ -34,9 +34,9 @@ const targetOption = {
   },
 } as const;
 
-const pack = defineCommand({
+const release = defineCommand({
   meta: {
-    name: "pack",
+    name: "release",
     description: "打部署产物包（dist + 单文件 + drizzle）",
   },
   args: {
@@ -62,7 +62,7 @@ const pack = defineCommand({
   },
   async run({ args }) {
     const interactive = isInteractive(args.yes as boolean | undefined);
-    p.intro("NAKU 打包");
+    p.intro("PACK 打包");
 
     // --- target ---
     let target = args.target as string | undefined;
@@ -205,7 +205,7 @@ const build = defineCommand({
       }
       only = [positional as PackItem];
     } else if (interactive) {
-      p.intro("NAKU 本地构建");
+      p.intro("PACK 本地构建");
       only = assertNotCancel(
         await p.multiselect({
           message: "构建什么",
@@ -245,11 +245,11 @@ const build = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: "naku",
+    name: "pack",
     version: "0.0.0",
-    description: "NAKU 打包 / 本地构建",
+    description: "PACK 打包 / 本地构建",
   },
-  subCommands: { pack, build },
+  subCommands: { release, build },
 });
 
 runMain(main);

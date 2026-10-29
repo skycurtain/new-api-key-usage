@@ -18,8 +18,7 @@
     "build:web": "bun run --cwd apps/web build",
     "build:server": "bun build --compile --outfile=bin/naku-server apps/server/src/index.ts",
     "build:engine": "bun build --compile --outfile=bin/naku-engine apps/engine/src/index.ts",
-    "pack:release": "bun run scripts/pack-release.ts",
-    "naku": "bun run scripts/cli.ts"
+    "pack": "bun run scripts/cli.ts"
   },
   "devDependencies": {
     "@clack/prompts": "^1.8.1",
