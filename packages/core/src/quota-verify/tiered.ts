@@ -6,7 +6,12 @@
  * 依据：`docs/references/NewAPI-用量计算链路.md` §5
  */
 
-import { compileBillingExpr, decodeBase64Utf8 } from "./expression.ts";
+import {
+  compileBillingExpr,
+  decodeBase64Utf8,
+  type CompileOutcome,
+  type CompiledExpr,
+} from "./expression.ts";
 import { readNumber, readNumberOr, toQuota } from "./math.ts";
 import type { QuotaCandidate, UsageLogLike, UsageSemantic } from "./types.ts";
 
@@ -14,26 +19,37 @@ import type { QuotaCandidate, UsageLogLike, UsageSemantic } from "./types.ts";
 const CLAUDE_CACHE_CREATION_1H_MULTIPLIER = 6 / 3.75;
 
 /**
- * 本模块支持的表达式变量。
+ * 解开并编译 `expr_b64`。
  *
- * 其余变量（`img` / `img_cr` / `img_o` / `ai` / `ao` 等）一律由 `verifyQuota` 在进入本文件前拒绝
- * —— 因为图片 / 音频类附加项不在覆盖范围内。
+ * 三种情况必须分开归因，否则会重演「表达式完好却报缺 expr_b64」：
+ *   字段没有 / 解不开  → `no_billing_info`（确实没有可用的表达式）
+ *   语法不对           → `expr_grammar`
+ *   语法对了但不在范围内 → `fixed_expr` / `expr_unsupported` / `expr_var` …
  */
-export const SUPPORTED_EXPR_VARS = ["p", "c", "len", "cr", "cc", "cc1h", "cc12h"] as const;
-
-/** 解开 `expr_b64` 并返回表达式引用的变量名；无法解码或解析时返回 `null` */
-export function billingExprVars(o: Record<string, unknown>): string[] | null {
+export function compileTieredExpr(o: Record<string, unknown>): CompileOutcome {
   const exprB64 = o["expr_b64"];
-  if (typeof exprB64 !== "string" || exprB64 === "") return null;
-  try {
-    return [...compileBillingExpr(decodeBase64Utf8(exprB64)).vars];
-  } catch {
-    return null;
+  if (typeof exprB64 !== "string" || exprB64 === "") {
+    return {
+      ok: false,
+      rejection: { reason: "no_billing_info", detail: "tiered_expr 行缺少 expr_b64" },
+    };
   }
+
+  let text: string;
+  try {
+    text = decodeBase64Utf8(exprB64);
+  } catch {
+    return {
+      ok: false,
+      rejection: { reason: "no_billing_info", detail: "expr_b64 不是合法的 base64 文本" },
+    };
+  }
+
+  return compileBillingExpr(text);
 }
 
 /**
- * 按需要验算 `tiered_expr` 行；无法解析表达式时返回 `null`。
+ * 按需要验算 `tiered_expr` 行。
  *
  * 归一化方向在两种语义下**相反**，这是本函数最容易写错的地方：
  *   - OpenAI：`prompt_tokens` 含所有子类，表达式引用了某子类才从 `p` 里减掉
@@ -42,26 +58,15 @@ export function billingExprVars(o: Record<string, unknown>): string[] | null {
 export function buildTieredCandidate(
   row: UsageLogLike,
   o: Record<string, unknown>,
+  compiled: CompiledExpr,
   semantic: UsageSemantic,
   quotaPerUnit: number,
-): QuotaCandidate | null {
-  const exprB64 = o["expr_b64"];
-  if (typeof exprB64 !== "string" || exprB64 === "") return null;
-
-  let expr: string;
-  let compiled;
-  try {
-    expr = decodeBase64Utf8(exprB64);
-    compiled = compileBillingExpr(expr);
-  } catch {
-    return null;
-  }
-
+): QuotaCandidate {
   const isAnthropic = semantic === "anthropic";
   const used = compiled.vars;
 
   let p = row.prompt_tokens;
-  let c = row.completion_tokens;
+  const c = row.completion_tokens;
   const cr = readNumber(o, "cache_tokens");
   const ccTotal = readNumber(o, "cache_creation_tokens");
 
@@ -94,12 +99,10 @@ export function buildTieredCandidate(
     if (used.has("cc")) p -= cc;
   }
   if (p < 0) p = 0;
-  if (c < 0) c = 0;
 
-  // 变量集合已由 billingExprVars 校验：只有 SUPPORTED_EXPR_VARS 里的变量能到达这里
   const vars: Record<string, number> = {
     p,
-    c,
+    c: Math.max(c, 0),
     len,
     cr,
     cc,
@@ -107,13 +110,7 @@ export function buildTieredCandidate(
     cc12h: readNumber(o, "cache_creation_tokens_12h"),
   };
 
-  let rawCost: number;
-  try {
-    rawCost = compiled.eval(vars);
-  } catch {
-    // 求值期异常同样归为「无法验算」，不向调用方抛
-    return null;
-  }
+  const rawCost = compiled.eval(vars);
   const groupRatio = readNumberOr(o, "group_ratio", 1);
   // 表达式系数单位是 $/1M tokens
   const afterGroup = (rawCost / 1_000_000) * quotaPerUnit * groupRatio;
@@ -124,6 +121,6 @@ export function buildTieredCandidate(
     semantic,
     expected,
     delta: expected - row.quota,
-    trace: { expr, vars, rawCost, quotaPerUnit, groupRatio },
+    trace: { expr: compiled.source, vars, rawCost, quotaPerUnit, groupRatio },
   };
 }

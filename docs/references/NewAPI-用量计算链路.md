@@ -331,19 +331,21 @@ if !used("cc")   p += cc ; cc = 0
 quota = round_half_away( eval(expr, vars) / 1e6 × QPU × group_ratio )
 ```
 
-### 5.4 求值器覆盖的语法子集
+### 5.4 与 expr-lang v1.17.8 的对齐范围
 
-本项目只实现 `pkg/billingexpr` 的一个**子集**；不认识的语法一律拒绝（→ `unsupported`），不做近似、不降级成默认值。
+解析器按 expr-lang v1.17.8 的优先级表**全量**实现（表见 [`计费表达式语法.md`](计费表达式语法.md)）；**求值**只覆盖与 token 量直接相关的构造，其余在编译期就指名拒绝（→ `unsupported`），不做近似、不降级成默认值。
 
-| 类别 | 构造 |
-|---|---|
-| 已实现 | 三元 `?:` · 比较 `<` `<=` `>` `>=` `==` `!=` · `&&` `\|\|` · 加减乘除 · 一元负 · 括号 · 数字 / 字符串 · `tier(name, expr)`（须为 2 个参数） |
-| 现有真实表达式用到的（14 种 / 3 267 行） | 三元 · `<=` · `tier()` · 加 · 乘 · 小数 · 变量 |
-| 已实现但**无真实样本** | 除法 · 括号 · 一元负 · `&&` `\|\|` · 其余比较符 |
+| 类别 | 构造 | 处理 |
+|---|---|---|
+| 求值 | 数字 / 字符串 / 布尔 / `nil` · `+ - * / % ** ^` · 六种比较 · `and` `or` `not` `&&` `\|\|` `!` · 三元与 Elvis · `??` · 括号 · `tier()` · 7 个 token 变量 · `max` `min` `abs` `ceil` `floor` | 算 |
+| 解析但拒绝 | `in` / `not in` / `matches` / `contains` / `startsWith` / `endsWith`；数组、映射、成员访问、下标、切片、区间 | `expr_unsupported` |
+| 指名拒绝 | 集合内建、lambda `#`、时间函数、`header` / `param` / `u` / `has()`、`let` / `if` / `;`、管道 `\|`、`$env` | `expr_unsupported` |
+| 按次 | `fixed()` | `fixed_expr` |
 
-- 未观测的那部分与已观测部分**共用同一套解析机器**（`/` 与 `*` 同属一个优先级层，括号在 `primary()` 内），独立逻辑合计约十余行。
-- 它们经过一次离线验证（3000 例随机算术对拍 JS 语义 + 逐条手工样例），但**验证用例未入库**——不构成持续保证。
-- 后果边界：若上游改用这些构造而求值器理解有误，得到的是 `unmatched`（`delta ≠ 0`），不会静默给出错数。
+- 14 种真实表达式（3 267 行）只用三元 · `<=` · `tier()` · 加 · 乘 · 小数 · 变量，全部落在「求值」一行内。
+- **数值语义与上游逐位一致**：`run.go` 把 env 全填成 `float64`，`max` / `min` 族直接绑 `math.*`，故 `/` 是浮点除、`%` 取余符号随被除数。
+- 对齐范围靠**临时差分脚本**核对（上游 `billingexpr_test.go` + `testdata/` 的 49 条用例：算对 33 · 拒绝 16 · 算错 0），用例**不入库**——与「不保留静态回归」的裁决一致。
+- 后果边界：拒绝是可解释的（`detail` 带出具体名字）；万一某构造的理解仍有偏差，得到的是 `unmatched`（`delta ≠ 0`），不会静默给出错数。
 
 ### 5.5 代入一条真实日志
 
@@ -419,7 +421,7 @@ subscription_consumed   = subscription_pre_consumed + subscription_post_delta  �
 
 本模块只做 **`PostTextConsumeQuota` 这一条结算路径**（chat / embeddings / responses / responses-compact 都汇入它），且只做其中的**倍率制**与**表达式计费**两种计价方式。其余情形一律返回 `unsupported` 并给出原因，**不做估算、不给"尽力而为"的数**。
 
-`unsupported` 共 10 种 `reason`，按 `verifyQuota` 的判定顺序：
+`unsupported` 共 13 种 `reason`，按 `verifyQuota` 的判定顺序：
 
 | 顺序 | 判据 | `reason` | 出处 |
 |---|---|---|---|
@@ -432,9 +434,13 @@ subscription_consumed   = subscription_pre_consumed + subscription_post_delta  �
 | 6 | 含图片 token 项 | `image_tokens` | `image` / `image_output` 出现，即 §4.3 的附加项 |
 | 7 | 含音频输入项 | `audio_tokens` | `audio_input_price` / `audio_input_token_count` 出现 |
 | 8 | 含工具附加费 | `tool_surcharge` | `tool_surcharges` 出现 |
-| 9 | `tiered_expr` 行缺可解析的 `expr_b64` | `no_billing_info` | 表达式缺失，或语法超出 §5.4 的子集 |
-| 10 | 表达式引用不支持的变量 | `image_tokens` / `audio_tokens` / `expr_var` | 变量涉及 `img*` / `ai`·`ao` / 其它未知名（§5.1） |
-| 11 | 非 `tiered_expr` 且既无 `model_ratio`、无 `model_price` | `no_billing_info` | 免费模型或字段缺失 |
+| 9 | `tiered_expr` 行缺 `expr_b64`，或 base64 解不开 | `no_billing_info` | 确实没有可用的表达式 |
+| 10 | 表达式带 `\|\|\|` 条件倍率，或版本前缀不是 `v1` | `expr_unsupported` | `pkg/billingexpr/compile.go` 的拼接约定；条件依赖请求上下文，日志里没有 |
+| 11 | 表达式词法 / 语法不合法 | `expr_grammar` | 上游存进来的表达式都经过编译校验，这条在实践中不应出现 |
+| 12 | 表达式用了 `fixed()` | `fixed_expr` | `fixed()` 把档位切到按次（`RunExpr` 里 `BillingUnit = request`），不在覆盖范围 |
+| 13 | 构造 / 函数 / 运算符不在求值白名单 | `expr_unsupported` | `detail` 带名字：`param` / `header` / 时间函数 / `u()`、`in` / `matches`、数组映射、`let` 等（§5.4） |
+| 14 | 表达式引用不支持的变量 | `image_tokens` / `audio_tokens` / `expr_var` | 变量涉及 `img*` · `image_count` / `ai` · `ao` / 其它未知名（§5.1） |
+| 15 | 非 `tiered_expr` 且既无 `model_ratio`、无 `model_price` | `no_billing_info` | 免费模型或字段缺失 |
 
 > 第 4 步只是「这条日志出自 `GenerateTextOtherInfo`」的指纹，**不是「文本对话」的充分条件**：WS / 音频也先经同一个构建器（靠第 2、3 步拦掉）；而**按次的文本请求同样写这四个键**，由第 5 步拦下，不靠签名。
 

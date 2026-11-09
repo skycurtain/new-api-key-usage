@@ -37,7 +37,16 @@ export type UnsupportedReason =
   | "audio_tokens"
   /** 工具调用附加费（`tool_surcharges`）—— 附加项不在范围内 */
   | "tool_surcharge"
-  /** 表达式引用了本模块不支持的变量（仅支持 `p` `c` `len` `cr` `cc` `cc1h` `cc12h`） */
+  /** 表达式无法解析：词法 / 语法错误，表达式本身就是坏的 */
+  | "expr_grammar"
+  /** 表达式用了 `fixed()`：按次计费，不在覆盖范围 */
+  | "fixed_expr"
+  /**
+   * 语法上认得，但构造 / 函数 / 运算符不在本模块的求值白名单里。
+   * `detail` 一定带具体名字（如「时间函数 hour()」「数组字面量」），不让调用方自己猜。
+   */
+  | "expr_unsupported"
+  /** 表达式引用了本模块不提供的变量（仅支持 `p` `c` `len` `cr` `cc` `cc1h` `cc12h`） */
   | "expr_var";
 
 /** `usage_logs` 中参与验算的列（其余列与本计算无关） */

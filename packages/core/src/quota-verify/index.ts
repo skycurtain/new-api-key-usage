@@ -12,7 +12,8 @@
  *   其它调用形态     `task` MJ/异步任务 · `realtime` 实时语音 · `audio` 音频 TTS/STT
  *   其它计价方式     `fixed_price` 按次固定价
  *   认不出来         `not_text_path` 缺文本日志签名键 · `no_billing_info` 字段缺失
- *   表达式变量       `expr_var` 引用了本模块不提供的变量
+ *   表达式           `expr_grammar` 语法坏 · `fixed_expr` 用 fixed() 按次
+ *                    `expr_unsupported` 构造/函数不在白名单（detail 带名字）· `expr_var` 变量不支持
  *
  * 已知结构性盲区（日志侧不可得，后果是「对不上」而非「算错」）：
  *   OpenRouter-Claude 归一化需 `ChannelType`；估算路径 / 金额饱和 / 实际渠道在 `admin_info`。
@@ -27,19 +28,23 @@
  * `unmatched` / `unsupported` 只展示原因，**不得把候选值当结果**。
  *
  * 模块划分（`packages/core/src/quota-verify/`）：
- *   expression.ts  表达式 DSL **子集**的安全求值（不是 `billingexpr` 全集，未知语法一律拒绝）
- *   math.ts        取整 / 饱和 / 字段读取
- *   types.ts       公共类型与常量
- *   tiered.ts      表达式计费分支
- *   multiplier.ts  倍率制分支
- *   index.ts       本文件：路径判定 + 分派
+ *   expr-lexer.ts    词法（numbers / strings / idents / operators）
+ *   expr-ast.ts      AST 节点与两类编译期拒绝
+ *   expr-parser.ts   Pratt 解析器，优先级照抄 expr-lang v1.17.8
+ *   expr-eval.ts     能力白名单 + 解释器
+ *   expression.ts    `expr_b64` 的编译门面（版本前缀 / `|||` / 失败归一）
+ *   math.ts          取整 / 饱和 / 字段读取
+ *   types.ts         公共类型与常量
+ *   tiered.ts        表达式计费分支
+ *   multiplier.ts    倍率制分支
+ *   index.ts         本文件：路径判定 + 分派
  *
  * Bun 纪律：只用 TypeScript 标准库与 Web 标准 API，不引 `Bun.*` / `node:*`。
  */
 
 import { readNumber } from "./math.ts";
 import { buildMultiplierCandidate } from "./multiplier.ts";
-import { buildTieredCandidate, billingExprVars, SUPPORTED_EXPR_VARS } from "./tiered.ts";
+import { buildTieredCandidate, compileTieredExpr } from "./tiered.ts";
 import {
   DEFAULT_QUOTA_PER_UNIT,
   type QuotaCandidate,
@@ -186,23 +191,14 @@ export function verifyQuota(row: UsageLogLike, options: QuotaVerifyOptions = {})
   const candidates: QuotaCandidate[] = [];
 
   if (o["billing_mode"] === "tiered_expr") {
-    const exprVars = billingExprVars(o);
-    if (exprVars === null) {
-      return unsupported("no_billing_info", "tiered_expr 行缺少可解析的 expr_b64");
-    }
-    const supported: readonly string[] = SUPPORTED_EXPR_VARS;
-    const offending = exprVars.filter((v) => !supported.includes(v));
-    if (offending.length > 0) {
-      const reason: UnsupportedReason = offending.some((v) => v.startsWith("img"))
-        ? "image_tokens"
-        : offending.some((v) => v === "ai" || v === "ao")
-          ? "audio_tokens"
-          : "expr_var";
-      return unsupported(reason, `表达式引用了本模块不支持的变量：${offending.join(", ")}`);
+    // 表达式只编译一次：变量白名单、语法、能力判定都在编译期一次做完，
+    // 失败原因也随之精确到「哪一类不支持」，不再笼统归到「缺 expr_b64」。
+    const outcome = compileTieredExpr(o);
+    if (!outcome.ok) {
+      return unsupported(outcome.rejection.reason, outcome.rejection.detail);
     }
     for (const semantic of semantics) {
-      const candidate = buildTieredCandidate(row, o, semantic, quotaPerUnit);
-      if (candidate !== null) candidates.push(candidate);
+      candidates.push(buildTieredCandidate(row, o, outcome.compiled, semantic, quotaPerUnit));
     }
   } else if (readNumber(o, "model_ratio") > 0) {
     // 倍率制：model_price 的哨兵值为 -1（无固定单价），不是 0
@@ -214,10 +210,6 @@ export function verifyQuota(row: UsageLogLike, options: QuotaVerifyOptions = {})
       "no_billing_info",
       "既无 model_ratio、无 model_price，也非 tiered_expr（免费模型或字段缺失）",
     );
-  }
-
-  if (candidates.length === 0) {
-    return unsupported("no_billing_info", "tiered_expr 行缺少可用的 expr_b64");
   }
 
   const deduped = dedupeCandidates(candidates);
