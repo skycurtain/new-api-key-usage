@@ -149,6 +149,7 @@ docker compose ps          # migrate 应为 exited(0)，其余 running/healthy
 | [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：`/me` · `/overview` · `/logs` | 定稿（2026-10-12） |
 | [`docs/design/同步引擎设计.md`](docs/design/同步引擎设计.md) | 独立 `apps/engine`：轮次、失败只记录、`engine_status` 快照 | 已实现（定稿 2026-10-05） |
 | [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 上游可用接口参考：鉴权档位、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
+| [`docs/references/NewAPI-用量计算链路.md`](docs/references/NewAPI-用量计算链路.md) | `logs.quota` 从何而来：四类调用与结算入口、**覆盖矩阵**、三步反查、两类公式、取整兜底与验算边界 | 定稿（2026-11-09） |
 
 - 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）
 - 生命周期：状态流转（草案 → 讨论中 → 待审阅 → 定稿(日期) → 已实现）；定稿后不搬家、只改状态；被取代时删除（git 历史即考古）

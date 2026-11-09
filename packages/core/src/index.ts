@@ -7,4 +7,5 @@ export * from "./dedupe.ts";
 export * from "./schemas.ts";
 export * from "./log.ts";
 export * from "./usage.ts";
+export * from "./quota-verify/index.ts";
 export * from "./upstream.ts";

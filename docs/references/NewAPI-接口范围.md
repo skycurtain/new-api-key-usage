@@ -251,6 +251,7 @@ quota = ( (prompt_tokens − cache_tokens)             ← 提示 tokens（未�
         × group_ratio                                 ← 分组倍率
 ```
 
+- **适用条件（2026-11-09 修正）**：上式**只对 OpenAI 语义成立**——OpenAI 的 `prompt_tokens` 含命中缓存，故需先减 `cache_tokens` 再加回折扣价。**Anthropic 语义（Claude / Opus）的 `input_tokens` 本就不含缓存**，照上式再减一次即双重扣减（实测偏差可达 17 倍）；其口径为 `prompt_tokens + cache_tokens × cache_ratio + cache_creation_tokens × cache_creation_ratio`。语义判定与两种口径的完整链路见 [`NewAPI-用量计算链路.md`](NewAPI-用量计算链路.md)
 - 验证：6/6 条实测日志逐条吻合（差值仅为四舍五入）
 - 按次计费模型走 `model_price` 分支：`quota = model_price × QuotaPerUnit × group_ratio`（源码 `relay/helper/price.go`）
 - **公式中没有 `QuotaPerUnit`**：倍率与美元的锚定（`model_ratio = 1` ⇔ `$0.002 / 1K tokens`）已隐含它——倍率制下改 `QuotaPerUnit` 等于全站重定标；美元定价路径（`model_price` / 表达式 `$/1M`）才显式乘 `QuotaPerUnit`
