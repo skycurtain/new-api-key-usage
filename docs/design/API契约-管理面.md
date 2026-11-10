@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 |------|------|
-| 状态 | 定稿（2026-10-12，作者认可实现；含 10-09 支付拆表与 R16） |
+| 状态 | 定稿（2026-10-12，作者认可实现；含 10-09 支付拆表与 R16；2026-11-09 修正 §6 的字段暴露范围；2026-11-10 补单行 verify 端点） |
 | 关联 | 《API契约-公共约定》（定稿——总纲）· 八篇交互设计 · `api_keys` / `usage_logs` / `subscriptions` / `topups` / `qpu_history` / `members` / `users` / `sessions` 表字段设计（DTO 字段权威）· `需求清单.md` §9（访问主体模型） |
 | 产出 | 端点清单、请求 / 响应字段、错误码、本稿裁定项（§10）与遗留项（§11） |
 
@@ -32,6 +32,7 @@
 | 16 | `/api/admin/members/:id` | PATCH / DELETE | 档案修改（name/remark）与启停 / 空壳删除（仅 `key_count = 0`） |
 | 17 | `/api/admin/members/:id/token` | POST | 令牌重发（明文仅一次） |
 | 18 | `/api/admin/audit-logs` | GET | 审计日志（分页） |
+| 19 | `/api/admin/logs/:id/verify` | GET | 单行 quota 计算过程（详情弹窗按需） |
 
 ## 2. 引导与会话
 
@@ -184,11 +185,94 @@
   "quota": 250000, "quota_usd": "0.50",
   "prompt_tokens": 1200, "completion_tokens": 800,
   "use_time": 3, "is_stream": true,
-  "billing_source": "subscription", "subscription_id": 3
+  "billing_source": "subscription", "subscription_id": 3,
+  "raw": { "…": "完整落库行，字段见下" }
 }
 ```
 
-`token_name` 取**当前名**（联查 `api_keys`，与「展示名以当前为准」对齐——§10 裁定 2）；`username` / `channel` / `ip` / `token_id` / `request_id` / `other` 等其余表字段暂不出 API，界面需要时再扩。
+`token_name` 取**当前名**（联查 `api_keys`，与「展示名以当前为准」对齐——§10 裁定 2）。
+
+**`raw` 块**：每行附带**完整落库行**（`usage_logs` 原貌，字段名与表一致），供「原始数据」视图与前端侧计算（如 quota 验算）使用：
+
+| 字段 | 说明 |
+|---|---|
+| `other` | 上游 `other` JSON **原样**——计费口径全在这里：`billing_mode` / `expr_b64` / `model_ratio` / `model_price` / `group_ratio` / `cache_tokens` / `cache_creation_tokens*` / `usage_semantic` / `claude` 等 |
+| `dedupe_key` · `user_id` · `username` · `channel` · `channel_name` · `token_id` · `group_name` · `ip` · `request_id` · `upstream_request_id` | 表内其余列，原样透出 |
+| `created_at` | 秒级 Unix，与顶层同值 |
+| 其余 | 与顶层同名字段（`quota` / `prompt_tokens` …）在 `raw` 内重复一份，便于整行独立使用 |
+
+> **2026-11-09 修正**：本节原写「`other` 等其余表字段暂不出 API，界面需要时再扩」，与实现不符——日志列表实际为每行附带 `raw`（`apps/server/src/routes/admin-usage.ts` 的 `items` 构造），成员端 `/api/member/logs` 同构（`member-view.ts`）。原句会让人以为前端拿不到计费字段。
+
+### GET `/api/admin/logs/:id/verify` → 200 `LogVerify`
+
+详情弹窗「计算过程」的数据源（《交互设计-总览与共性》§3.9）——**按需单行**，不进列表载荷。
+
+- **QPU 口径**：按该行 `created_at` 从 `qpu_history` 解析（`qpuAt`），即**写时值**；**不是当前值**——历史 `quota` 整数永不被上游回填，用当前值重放等于重放一次没发生过的结算
+- **表达式**：不在响应里——前端从该行 `raw.other.expr_b64` 本地解码，以便立即渲染
+- **`type ≠ 2` 的行**：不特殊处理，照常走验算，自然落到 `unsupported`（`no_billing_info` / `not_text_path`）
+- **404**：id 不存在
+
+命中（表达式计费）：
+
+```json
+{
+  "status": "matched",
+  "branch": "tiered_expr",
+  "semantic": "openai",
+  "logged": 39192,
+  "computed": 39192,
+  "delta": 0,
+  "quota_per_unit": 500000,
+  "group_ratio": 1,
+  "tiered_expr": {
+    "matched_tier": "long_context",
+    "expr_value": 78384.4,
+    "vars": { "p": 3390, "c": 142, "len": 316862, "cr": 313472 }
+  },
+  "multiplier": null
+}
+```
+
+命中（倍率制）：
+
+```json
+{
+  "status": "matched",
+  "branch": "multiplier",
+  "semantic": "anthropic",
+  "logged": 57751, "computed": 57751, "delta": 0,
+  "quota_per_unit": 500000, "group_ratio": 1,
+  "tiered_expr": null,
+  "multiplier": {
+    "model_ratio": 2.5, "completion_ratio": 5,
+    "base": 2, "cached": 14845.7, "cache_creation": 867.5,
+    "output": 7385, "prompt_part": 15715.2, "total": 57750.5
+  }
+}
+```
+
+未覆盖：
+
+```json
+{
+  "status": "unsupported",
+  "reason": "expr_unsupported",
+  "detail": "表达式带请求条件倍率（||| 之后的部分）：条件依赖请求头 / 时间等请求上下文，日志里没有，无法独立复算"
+}
+```
+
+| 字段 | 口径 |
+|---|---|
+| `status` | `matched` / `unmatched` / `unsupported`——**只有 `matched` 可展示数字为结果**（验算模块的消费契约） |
+| `logged` / `computed` / `delta` | 日志值 / 重算值 / `computed − logged`；`unsupported` 时三者皆无 |
+| `quota_per_unit` | 该行写时 QPU（见上） |
+| `tiered_expr.matched_tier` | `tier()` 命中的档名；无档名时 `null` |
+| `tiered_expr.expr_value` | 表达式求值结果（$/1M 单位的中间量），即换算前的 `78,384.4` |
+| `tiered_expr.vars` | **仅表达式真正引用到的**变量，已按语义归一化后的取值 |
+| `multiplier.base` | 扣减缓存后的输入 token 基数 |
+| `multiplier.cached` / `cache_creation` / `output` | **已乘各自倍率**的贡献值（不是原始 token 数） |
+| `multiplier.prompt_part` | `base + cached + cache_creation` |
+| `multiplier.total` | `(prompt_part + output) × model_ratio × group_ratio`，取整前 |
 
 > **界面落点**：《交互设计-调用日志》——管理面独立查询页；总览/Key/成员筛选深链 + 行内回跳。
 

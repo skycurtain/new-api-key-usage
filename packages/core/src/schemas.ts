@@ -83,6 +83,46 @@ export const logPage = z.object({
   models: z.array(z.string()),
 });
 
+/** 单行 quota「计算过程」（详情弹窗按需拉取；对应 core 的 `LogVerify`） */
+export const logVerify = z.object({
+  status: z.enum(["matched", "unmatched"]),
+  branch: z.enum(["tiered_expr", "multiplier"]),
+  semantic: z.enum(["anthropic", "openai"]),
+  logged: z.number().int(),
+  computed: z.number().int(),
+  delta: z.number().int(),
+  quota_per_unit: z.number(),
+  group_ratio: z.number(),
+  tiered_expr: z
+    .object({
+      matched_tier: z.string().nullable(),
+      expr_value: z.number(),
+      vars: z.record(z.string(), z.number()),
+    })
+    .nullable(),
+  multiplier: z
+    .object({
+      model_ratio: z.number(),
+      completion_ratio: z.number(),
+      base: z.number(),
+      cached: z.number(),
+      cache_creation: z.number(),
+      output: z.number(),
+      prompt_part: z.number(),
+      total: z.number(),
+    })
+    .nullable(),
+});
+
+/** 未覆盖时的形状——与命中态互斥 */
+export const logVerifyUnsupported = z.object({
+  status: z.literal("unsupported"),
+  reason: z.string(),
+  detail: z.string(),
+});
+
+export const logVerifyAny = z.union([logVerify, logVerifyUnsupported]);
+
 export const keyItem = z.object({
   id: z.number().int(),
   token_name: z.string(),

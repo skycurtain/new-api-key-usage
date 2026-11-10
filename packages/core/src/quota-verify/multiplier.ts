@@ -69,9 +69,10 @@ export function buildMultiplierCandidate(
   if (base < 0) base = 0;
 
   const promptPart = base + cachedPart + ccPart;
+  const outputPart = row.completion_tokens * completionRatio;
 
   const ratio = modelRatio * groupRatio;
-  let total = (promptPart + row.completion_tokens * completionRatio) * ratio;
+  let total = (promptPart + outputPart) * ratio;
 
   // ④ 取整前守卫（仅倍率制分支有）
   if (ratio !== 0 && total <= 0) total = 1;
@@ -91,6 +92,17 @@ export function buildMultiplierCandidate(
     semantic,
     expected,
     delta: expected - row.quota,
-    trace: { base, promptPart, total, quotaPerUnit, groupRatio },
+    trace: {
+      base,
+      cachedPart,
+      cacheCreationPart: ccPart,
+      outputPart,
+      promptPart,
+      modelRatio,
+      completionRatio,
+      total,
+      quotaPerUnit,
+      groupRatio,
+    },
   };
 }

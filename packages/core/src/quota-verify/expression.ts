@@ -21,7 +21,12 @@ import {
   ExprUnsupportedError,
   type ExprNode,
 } from "./expr-ast.ts";
-import { analyzeExpression, evaluateExpression, type ExprRejection } from "./expr-eval.ts";
+import {
+  analyzeExpression,
+  evaluateExpression,
+  type EvalResult,
+  type ExprRejection,
+} from "./expr-eval.ts";
 import { parseExpression } from "./expr-parser.ts";
 
 /** 编译成功的表达式 */
@@ -30,7 +35,7 @@ export interface CompiledExpr {
   source: string;
   /** 表达式引用到的变量名（决定 `p` / `c` 的归一化方向） */
   vars: ReadonlySet<string>;
-  eval: (vars: Record<string, number>) => number;
+  eval: (vars: Record<string, number>) => EvalResult;
 }
 
 export type CompileOutcome =

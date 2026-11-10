@@ -4,7 +4,7 @@
  * 用途与全部依据见 `docs/references/NewAPI-用量计算链路.md`。
  */
 
-/** `QuotaPerUnit` 的上游默认值（真机由 `/api/status` 提供） */
+/** `QuotaPerUnit` 的上游出厂默认值（真机由 `/api/status` 提供，**不得当作验算输入**） */
 export const DEFAULT_QUOTA_PER_UNIT = 500_000;
 
 /** 结算路径：表达式计费 / 倍率制 */
@@ -58,15 +58,23 @@ export interface UsageLogLike {
 }
 
 export interface QuotaVerifyOptions {
-  /** `quota_per_unit`；缺省按 500000 */
-  quotaPerUnit?: number;
+  /**
+   * 该行**写时**的 `quota_per_unit`（按 `created_at` 从 `qpu_history` 解析）。
+   *
+   * **必填、无默认值**：历史 `quota` 整数永不被上游回填，表达式计费路径把当时的 QPU
+   * 乘进了这个整数里。用「当前值」重放，等于重放一次没发生过的结算——
+   * QPU 一旦变过，整片历史都会假性不一致。详见 `docs/design/验算功能实现方案.md`。
+   */
+  quotaPerUnit: number;
 }
 
-/** 验算中间量，供人工核对 */
+/** 验算中间量，供人工核对与「计算过程」展示 */
 export interface VerifyTrace {
   /** tiered：解出的表达式文本 */
   expr?: string;
-  /** tiered：表达式变量最终取值 */
+  /** tiered：`tier()` 命中的档名 */
+  matchedTier?: string | null;
+  /** tiered：表达式变量最终取值（**仅表达式引用到的**） */
   vars?: Record<string, number>;
   /** tiered：表达式求值结果（$/1M × tokens 的中间量） */
   rawCost?: number;
@@ -74,8 +82,18 @@ export interface VerifyTrace {
   groupRatio?: number;
   /** 倍率制：夹零后的输入基底（已扣除缓存读 / 缓存写 token） */
   base?: number;
-  /** 倍率制：提示部分合计（`base + 缓存读 + 缓存写`） */
+  /** 倍率制：缓存读贡献（已乘 `cache_ratio`） */
+  cachedPart?: number;
+  /** 倍率制：缓存写贡献（已乘各自的倍率） */
+  cacheCreationPart?: number;
+  /** 倍率制：输出贡献（已乘 `completion_ratio`） */
+  outputPart?: number;
+  /** 倍率制：输入侧合计（`base + 缓存读 + 缓存写`） */
   promptPart?: number;
+  /** 倍率制：`model_ratio` */
+  modelRatio?: number;
+  /** 倍率制：`completion_ratio` */
+  completionRatio?: number;
   /** 倍率制：乘完倍率、未取整的原始值 */
   total?: number;
 }

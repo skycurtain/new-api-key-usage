@@ -10,6 +10,8 @@ import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import LogsSummaryBar from "@/components/common/logs-summary-bar.vue";
+import VerifySteps from "@/components/common/verify-steps.vue";
+import { fetchLogVerify } from "@/api/admin/logs.ts";
 import {
   useLiveTimeRange,
   type RangeKind,
@@ -480,6 +482,7 @@ onUnmounted(() => {
           <span class="call-logs__note">内容</span>
           <span class="call-logs__content">{{ detailRecord.content }}</span>
         </div>
+        <VerifySteps :key="detailRecord.id" :record="detailRecord" :fetch-verify="fetchLogVerify" />
         <div class="call-logs__raw">
           <div class="call-logs__note">原始数据</div>
           <pre class="call-logs__json">{{ formatRaw(detailRecord) }}</pre>

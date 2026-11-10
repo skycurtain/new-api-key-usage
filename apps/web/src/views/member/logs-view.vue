@@ -13,6 +13,8 @@ import TableRefresh from "@/components/common/table-refresh.vue";
 import TimeRangePicker from "@/components/common/time-range-picker.vue";
 import QuotaText from "@/components/common/quota-text.vue";
 import LogsSummaryBar from "@/components/common/logs-summary-bar.vue";
+import VerifySteps from "@/components/common/verify-steps.vue";
+import { fetchLogVerify } from "@/api/member/me.ts";
 import { useMemberRange } from "@/composables/use-member-range.ts";
 import type { RangeKind } from "@/stores/member-range.ts";
 import { useMemberLogs, useMemberOverview } from "@/queries/member.ts";
@@ -432,6 +434,7 @@ watch(
           <span class="member-logs__note">内容</span>
           <span class="member-logs__content">{{ detailRecord.content }}</span>
         </div>
+        <VerifySteps :key="detailRecord.id" :record="detailRecord" :fetch-verify="fetchLogVerify" />
         <div class="member-logs__raw">
           <div class="member-logs__note">原始数据</div>
           <pre class="member-logs__json">{{ formatRaw(detailRecord) }}</pre>

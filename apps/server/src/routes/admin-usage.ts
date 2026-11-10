@@ -1,10 +1,13 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import {
   ERR,
+  qpuAt,
   resolveQpuTimeline,
   sumUsage,
+  toLogVerify,
   toUnixSec,
   usageRowPrecise,
+  verifyQuota,
   type LogItem,
 } from "@new-api-key-usage/core";
 import {
@@ -14,8 +17,10 @@ import {
 } from "../middleware.ts";
 import {
   err401,
+  err404,
   err422,
   logPageSchema,
+  logVerifyAnySchema,
 } from "../api-schemas.ts";
 import { z } from "zod";
 
@@ -412,6 +417,46 @@ export function adminUsageRoutes() {
         },
         200,
       );
+    },
+  );
+
+  r.openapi(
+    createRoute({
+      method: "get",
+      path: "/logs/{id}/verify",
+      summary: "单行 quota 计算过程",
+      description:
+        "详情弹窗按需拉取；QPU 按该行 created_at 从 qpu_history 解析（写时值，不是当前值）；表达式原文不在本响应里（前端从 raw.other.expr_b64 解码）",
+      tags: ["用量"],
+      security: [{ adminSession: [] }],
+      request: { params: z.object({ id: z.string() }) },
+      responses: {
+        200: {
+          description: "matched / unmatched / unsupported",
+          content: { "application/json": { schema: logVerifyAnySchema } },
+        },
+        401: err401,
+        404: err404,
+        422: err422,
+      },
+    }),
+    async (c) => {
+      const id = Number(c.req.param("id"));
+      const repos = c.get("repos");
+      const row = Number.isInteger(id) ? await repos.logs.findById(id) : null;
+      if (row === null) return jsonError(c, 404, ERR.not_found());
+
+      const timeline = resolveQpuTimeline(await repos.qpu.listTimeline());
+      const result = verifyQuota(
+        {
+          prompt_tokens: row.prompt_tokens,
+          completion_tokens: row.completion_tokens,
+          quota: row.quota,
+          other: (row.other ?? null) as Record<string, unknown> | null,
+        },
+        { quotaPerUnit: qpuAt(row.created_at, timeline) },
+      );
+      return c.json(toLogVerify(result), 200);
     },
   );
 

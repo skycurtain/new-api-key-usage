@@ -4,9 +4,9 @@
 
 | 项目 | 内容 |
 |------|------|
-| 状态 | 定稿（2026-10-12，作者认可实现） |
+| 状态 | 定稿（2026-10-12，作者认可实现；2026-11-10 补单行 verify 端点） |
 | 关联 | 《API契约-公共约定》（定稿——总纲）·《API契约-管理面》·《交互设计-成员视图》·《交互设计-登录与会话》§4（登录壳）· `members` / `usage_logs` / `subscriptions` / `topups` 表字段设计（DTO 字段权威） |
-| 产出 | 端点清单（3 个）、请求 / 响应字段、裁定项（§5）、遗留项（§6） |
+| 产出 | 端点清单（4 个）、请求 / 响应字段、裁定项（§5）、遗留项（§6） |
 
 ---
 
@@ -17,6 +17,7 @@
 | 1 | `/api/member/me` | GET | 令牌验证 + 页头（登录壳提交的落点） |
 | 2 | `/api/member/overview` | GET | 总览与支付参数聚合：总用量、按来源分解、我的 key、支付参数列表 |
 | 3 | `/api/member/logs` | GET | 日志明细（名下 key，分页） |
+| 4 | `/api/member/logs/:id/verify` | GET | 单行 quota 计算过程（详情弹窗按需） |
 
 ## 2. 令牌验证与页头
 
@@ -90,6 +91,28 @@
 ```
 
 `token_name` 取当前名（管理面裁定 2 沿用）。`raw` 为**完整落库行**（上游字段原貌 + 系统字段，`created_at` 为 Unix 秒）——界面「原始数据」视图的数据源；管理面 `GET /api/admin/logs` 同构带出。
+
+### GET `/api/member/logs/:id/verify` → 200 `LogVerify`
+
+详情弹窗「计算过程」的数据源（《交互设计-成员视图》§4.4 · 规格见《交互设计-总览与共性》§3.9）。
+
+**响应形状与管理面 `GET /api/admin/logs/:id/verify` 完全同构**（《API契约-管理面》§6），此不复述。成员侧只多两条范围规则：
+
+1. **范围恒为名下 key**：该行 `api_key_id` 的 `api_keys.member_id` 必须等于令牌所属成员；否则 **404**（不区分「不存在」与「不是你的」，避免探测他人日志）
+2. **QPU 口径同管理面**：按该行 `created_at` 从 `qpu_history` 解析的**写时值**
+
+```json
+{
+  "status": "matched",
+  "branch": "tiered_expr",
+  "semantic": "openai",
+  "logged": 39192, "computed": 39192, "delta": 0,
+  "quota_per_unit": 500000, "group_ratio": 1,
+  "tiered_expr": { "matched_tier": "long_context", "expr_value": 78384.4,
+                   "vars": { "p": 3390, "c": 142, "len": 316862, "cr": 313472 } },
+  "multiplier": null
+}
+```
 
 ## 5. 本稿裁定项（请作者重点审）
 

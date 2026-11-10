@@ -100,7 +100,9 @@ export function buildTieredCandidate(
   }
   if (p < 0) p = 0;
 
-  const vars: Record<string, number> = {
+  // 求值环境需要全部 7 个变量（没给的按 0），但 trace 只保留表达式**引用到的**
+  // ——「计算过程」只展示真正参与计算的那几个
+  const evalVars: Record<string, number> = {
     p,
     c: Math.max(c, 0),
     len,
@@ -110,17 +112,30 @@ export function buildTieredCandidate(
     cc12h: readNumber(o, "cache_creation_tokens_12h"),
   };
 
-  const rawCost = compiled.eval(vars);
+  const { value: rawCost, matchedTier } = compiled.eval(evalVars);
   const groupRatio = readNumberOr(o, "group_ratio", 1);
   // 表达式系数单位是 $/1M tokens
   const afterGroup = (rawCost / 1_000_000) * quotaPerUnit * groupRatio;
   const expected = toQuota(afterGroup);
+
+  const shownVars: Record<string, number> = {};
+  for (const name of used) {
+    const v = evalVars[name];
+    if (v !== undefined) shownVars[name] = v;
+  }
 
   return {
     branch: "tiered_expr",
     semantic,
     expected,
     delta: expected - row.quota,
-    trace: { expr: compiled.source, vars, rawCost, quotaPerUnit, groupRatio },
+    trace: {
+      expr: compiled.source,
+      matchedTier,
+      vars: shownVars,
+      rawCost,
+      quotaPerUnit,
+      groupRatio,
+    },
   };
 }

@@ -45,8 +45,8 @@
 import { readNumber } from "./math.ts";
 import { buildMultiplierCandidate } from "./multiplier.ts";
 import { buildTieredCandidate, compileTieredExpr } from "./tiered.ts";
+import type { LogVerify } from "../types.ts";
 import {
-  DEFAULT_QUOTA_PER_UNIT,
   type QuotaCandidate,
   type QuotaVerify,
   type QuotaVerifyOptions,
@@ -113,7 +113,7 @@ function unsupported(reason: UnsupportedReason, detail: string): QuotaVerify {
  * 只实现文本对话的两条路径（倍率制 / 表达式计费）× 两种语义。
  * 其余调用形态一律返回 `unsupported` 并说明原因，不做估算。
  */
-export function verifyQuota(row: UsageLogLike, options: QuotaVerifyOptions = {}): QuotaVerify {
+export function verifyQuota(row: UsageLogLike, options: QuotaVerifyOptions): QuotaVerify {
   const raw = row.other;
   if (raw === null || raw === undefined || typeof raw !== "object") {
     return unsupported("no_billing_info", "other 缺失或不是对象");
@@ -186,7 +186,7 @@ export function verifyQuota(row: UsageLogLike, options: QuotaVerifyOptions = {})
     );
   }
 
-  const quotaPerUnit = options.quotaPerUnit ?? DEFAULT_QUOTA_PER_UNIT;
+  const quotaPerUnit = options.quotaPerUnit;
   const semantics = candidateSemantics(o);
   const candidates: QuotaCandidate[] = [];
 
@@ -218,4 +218,63 @@ export function verifyQuota(row: UsageLogLike, options: QuotaVerifyOptions = {})
     return { status: "matched", actual: row.quota, candidate: hit, candidates: deduped };
   }
   return { status: "unmatched", actual: row.quota, candidates: deduped };
+}
+
+/**
+ * 把验算结果压成「计算过程」的对外形状（详情弹窗用）。
+ *
+ * 表达式原文**不在这里**——前端从 `raw.other.expr_b64` 本地解码，
+ * 这样弹窗打开时表达式立刻可见，不必等这个请求。
+ */
+export function toLogVerify(result: QuotaVerify): LogVerify {
+  if (result.status === "unsupported") {
+    return { status: "unsupported", reason: result.reason, detail: result.detail };
+  }
+
+  const candidate =
+    result.status === "matched"
+      ? result.candidate
+      : // 不一致时取最接近的候选：要展示推导，就展示最可能的那一支
+        [...result.candidates].sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta))[0];
+
+  if (candidate === undefined) {
+    return {
+      status: "unsupported",
+      reason: "no_billing_info",
+      detail: "没有任何可用的验算候选",
+    };
+  }
+
+  const { trace } = candidate;
+  return {
+    status: result.status,
+    branch: candidate.branch,
+    semantic: candidate.semantic,
+    logged: result.actual,
+    computed: candidate.expected,
+    delta: candidate.delta,
+    quota_per_unit: trace.quotaPerUnit ?? 0,
+    group_ratio: trace.groupRatio ?? 1,
+    tiered_expr:
+      candidate.branch === "tiered_expr"
+        ? {
+            matched_tier: trace.matchedTier ?? null,
+            expr_value: trace.rawCost ?? 0,
+            vars: trace.vars ?? {},
+          }
+        : null,
+    multiplier:
+      candidate.branch === "multiplier"
+        ? {
+            model_ratio: trace.modelRatio ?? 0,
+            completion_ratio: trace.completionRatio ?? 1,
+            base: trace.base ?? 0,
+            cached: trace.cachedPart ?? 0,
+            cache_creation: trace.cacheCreationPart ?? 0,
+            output: trace.outputPart ?? 0,
+            prompt_part: trace.promptPart ?? 0,
+            total: trace.total ?? 0,
+          }
+        : null,
+  };
 }

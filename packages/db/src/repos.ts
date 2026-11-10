@@ -660,6 +660,16 @@ export function createRepos(db: Db) {
         };
       },
 
+      /** 单行（详情弹窗「计算过程」用）——含 `other` 与 `api_key_id` */
+      async findById(id: number): Promise<UsageLogRow | null> {
+        const rows = await db
+          .select()
+          .from(usageLogs)
+          .where(eq(usageLogs.id, id))
+          .limit(1);
+        return rows[0] ?? null;
+      },
+
       /** 总览聚合用：type=2、按维字段 */
       async listForAggregate(from: Date, to: Date, type = 2) {
         return db

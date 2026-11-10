@@ -10,6 +10,7 @@ import {
   keyItem,
   logItem,
   logPage,
+  logVerifyAny,
   memberItem,
   memberMe,
   memberOverview,
@@ -53,6 +54,7 @@ export const memberOverviewSchema = nameSchema(
 );
 export const logItemSchema = nameSchema(logItem, "LogItem");
 export const logPageSchema = nameSchema(logPage, "LogPage");
+export const logVerifyAnySchema = nameSchema(logVerifyAny, "LogVerify");
 export const subscriptionItemSchema = nameSchema(
   subscriptionItem,
   "SubscriptionItem",

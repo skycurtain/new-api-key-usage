@@ -1,5 +1,6 @@
 import type {
   LogPage,
+  LogVerify,
   SubscriptionItem,
   TopupItem,
   UnixSec,
@@ -62,5 +63,11 @@ export async function fetchLogs(query: MemberLogQuery): Promise<LogPage> {
   const { data } = await memberHttp.get<LogPage>("/logs", {
     params: query,
   });
+  return data;
+}
+
+/** 单行「计算过程」——与管理面同构，范围恒为名下 key */
+export async function fetchLogVerify(id: number): Promise<LogVerify> {
+  const { data } = await memberHttp.get<LogVerify>(`/logs/${id}/verify`);
   return data;
 }

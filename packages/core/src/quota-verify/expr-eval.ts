@@ -445,7 +445,23 @@ function applyBinary(op: BinaryOp, l: ExprValue, r: ExprValue): ExprValue {
   }
 }
 
-function evalNode(node: ExprNode, vars: Record<string, number>): ExprValue {
+/** 一次求值的结果：数值 + 旁路信息 */
+export interface EvalResult {
+  value: number;
+  /** `tier()` 命中的档名；表达式没有 tier 包裹时为 null */
+  matchedTier: string | null;
+}
+
+/** 求值期旁路：目前只收 `tier()` 的档名（供「计算过程」展示命中档位） */
+interface EvalState {
+  matchedTier: string | null;
+}
+
+function evalNode(
+  node: ExprNode,
+  vars: Record<string, number>,
+  state: EvalState,
+): ExprValue {
   switch (node.k) {
     case "num":
       return node.v;
@@ -461,26 +477,33 @@ function evalNode(node: ExprNode, vars: Record<string, number>): ExprValue {
       return vars[node.name] ?? 0;
     }
     case "unary":
-      return applyUnary(node.op, evalNode(node.operand, vars));
+      return applyUnary(node.op, evalNode(node.operand, vars, state));
     case "binary":
-      return applyBinary(node.op, evalNode(node.left, vars), evalNode(node.right, vars));
+      return applyBinary(
+        node.op,
+        evalNode(node.left, vars, state),
+        evalNode(node.right, vars, state),
+      );
     case "ternary":
-      return truthy(evalNode(node.cond, vars))
-        ? evalNode(node.then, vars)
-        : evalNode(node.otherwise, vars);
+      return truthy(evalNode(node.cond, vars, state))
+        ? evalNode(node.then, vars, state)
+        : evalNode(node.otherwise, vars, state);
     case "coalesce": {
-      const left = evalNode(node.left, vars);
-      return left === null ? evalNode(node.right, vars) : left;
+      const left = evalNode(node.left, vars, state);
+      return left === null ? evalNode(node.right, vars, state) : left;
     }
     case "call": {
-      // tier(name, value)：档名只用于展示与 matched_tier，计费取第二个参数
+      // tier(name, value)：计费取第二个参数；档名只记进旁路，不参与计算
       if (node.name === "tier") {
         if (node.args.length !== 2) {
           throw new ExprEvalError(`tier() 需要 2 个参数，实际 ${node.args.length} 个`);
         }
-        return evalNode(node.args[1] as ExprNode, vars);
+        const nameArg = node.args[0];
+        // 三元只有一个分支会被求值，所以「最后命中的档名」就是真正跑的那一支
+        if (nameArg !== undefined && nameArg.k === "str") state.matchedTier = nameArg.v;
+        return evalNode(node.args[1] as ExprNode, vars, state);
       }
-      const args = node.args.map((a) => toNumber(evalNode(a, vars)));
+      const args = node.args.map((a) => toNumber(evalNode(a, vars, state)));
       const [first, second] = args;
       switch (node.name) {
         case "max":
@@ -508,6 +531,11 @@ function evalNode(node: ExprNode, vars: Record<string, number>): ExprValue {
  * 数值语义刻意贴着 Go 的 float64 走，不做任何取整或钳制：
  * 取整与 int32 饱和是结算层（`math.ts` 的 `toQuota`）的事。
  */
-export function evaluateExpression(node: ExprNode, vars: Record<string, number>): number {
-  return toNumber(evalNode(node, vars));
+export function evaluateExpression(
+  node: ExprNode,
+  vars: Record<string, number>,
+): EvalResult {
+  const state: EvalState = { matchedTier: null };
+  const value = toNumber(evalNode(node, vars, state));
+  return { value, matchedTier: state.matchedTier };
 }
