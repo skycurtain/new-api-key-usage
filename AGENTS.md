@@ -17,6 +17,7 @@
 - 数据模型：基线表（`api_keys` · `usage_logs` · `subscriptions` · `topups` · `qpu_history`）+ 三张访问主体表（`members` · `users` · `sessions`）——支付登记已拆为 `subscriptions` + `topups`（见 `docs/design/payments建模评估.md`）；同步架构（轮询 + `request_id` 去重 + 攒库）的动因由上游物理约束决定
 - 需求总集与裁决档案见 `docs/design/需求清单.md`；交付形态已裁决（双形态并行，完整形态先行）
 - 上游约束速记：只有 sk-key、无时间过滤接口 → 轮询攒库是唯一路径（README「架构的根本动因」）
+- **quota 验算**：`packages/core/src/quota-verify/`——范围裁决、语法层对齐与验收数据见 `docs/design/验算功能实现方案.md`（接手前必读，内含本机环境注意事项）；界面落点是调用详情的「计算过程」，规格见 `docs/design/交互设计-总览与共性.md` §3.9
 
 ## 命令
 

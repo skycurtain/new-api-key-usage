@@ -6,7 +6,7 @@
 
 | 项目 | 内容 |
 |------|------|
-| 当前状态 | **实现推进中**——设计文档主体定稿；后端 + 同步引擎 + 前端（管理面与成员视图）已落地；部署链已定（见 [`docs/design/部署方案.md`](docs/design/部署方案.md)）；Cloudflare Workers 抽取版待做 |
+| 当前状态 | **实现推进中**——设计文档主体定稿；后端 + 同步引擎 + 前端（管理面与成员视图）已落地；部署链已定（见 [`docs/design/部署方案.md`](docs/design/部署方案.md)）；quota 验算已落地并在调用详情提供「计算过程」（见 [`docs/design/验算功能实现方案.md`](docs/design/验算功能实现方案.md)）；Cloudflare Workers 抽取版待做 |
 | 技术栈 | 全栈 TypeScript（选型见 [`docs/design/技术选型.md`](docs/design/技术选型.md)）：Bun + Hono + Drizzle + PostgreSQL · 前端 Vue 3 + antdv-next |
 
 ## 这是什么
@@ -145,10 +145,12 @@ docker compose ps          # migrate 应为 exited(0)，其余 running/healthy
 | [`docs/design/交互设计-审计日志.md`](docs/design/交互设计-审计日志.md) | 管理操作留痕时间线 | 定稿（2026-10-10） |
 | [`docs/design/交互设计-成员视图.md`](docs/design/交互设计-成员视图.md) | 成员视图三页（总览 / 调用日志 / 支付参数）；订阅徽章展开 + 调用详情 | 定稿（2026-10-09） |
 | [`docs/design/API契约-公共约定.md`](docs/design/API契约-公共约定.md) | API 总纲：路由隔离与鉴权两档、错误信封、时间 / 数值 / 分页 / 命名 | 定稿（2026-10-10） |
-| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 18 端点 | 定稿（2026-10-12） |
-| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 3 端点：`/me` · `/overview` · `/logs` | 定稿（2026-10-12） |
+| [`docs/design/API契约-管理面.md`](docs/design/API契约-管理面.md) | 管理面 19 端点 | 定稿（2026-10-12） |
+| [`docs/design/API契约-成员视图.md`](docs/design/API契约-成员视图.md) | 成员视图 4 端点：`/me` · `/overview` · `/logs` · `/logs/:id/verify` | 定稿（2026-10-12） |
 | [`docs/design/同步引擎设计.md`](docs/design/同步引擎设计.md) | 独立 `apps/engine`：轮次、失败只记录、`engine_status` 快照 | 已实现（定稿 2026-10-05） |
+| [`docs/design/验算功能实现方案.md`](docs/design/验算功能实现方案.md) | quota 验算：范围裁决、已落地内容、expr-lang 语法层对齐、QPU 取写时值（**接手必读**） | 已实现（2026-11-09；11-10 接入「计算过程」） |
 | [`docs/references/NewAPI-接口范围.md`](docs/references/NewAPI-接口范围.md) | 上游可用接口参考：鉴权档位、字段语义、实测行为、源码出处（**唯一上游参考**） | 事实依据 |
+| [`docs/references/计费表达式语法.md`](docs/references/计费表达式语法.md) | 计费表达式语法基线：expr-lang v1.17.8 优先级表、词法、求值环境、`v1:` 与 `\|\|\|` 拼接约定 | 事实依据（2026-11-09） |
 | [`docs/references/NewAPI-用量计算链路.md`](docs/references/NewAPI-用量计算链路.md) | `logs.quota` 从何而来：四类调用与结算入口、**覆盖矩阵**、三步反查、两类公式、取整兜底与验算边界 | 定稿（2026-11-09） |
 
 - 命名与分区：**目录用英文、文档名用中文**；`docs/design/`（方案与决策）· `docs/references/`（平台可用接口参考——实证事实，不做设计决策）
