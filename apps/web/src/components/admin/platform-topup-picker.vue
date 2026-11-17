@@ -2,7 +2,7 @@
 /**
  * 充值选用弹层：登录 + 传统分页；已登记按 upstream_id 灰显
  */
-import { computed, ref, watch } from "vue";
+import { reactive, ref, watch } from "vue";
 import {
   listPlatformTopups,
   loginPlatform,
@@ -24,8 +24,8 @@ const emit = defineEmits<{
 const TOKEN_KEY = "naku_platform_token";
 const PAGE_SIZE = 10;
 
-const username = ref("");
-const password = ref("");
+/** 表单模型：antdv Form 只在提供 model 时才派发 finish（登录按钮经它触发） */
+const form = reactive({ username: "", password: "" });
 const error = ref("");
 const loading = ref(false);
 /** 打开后检查登录并拉取中——避免闪现登录表单 */
@@ -33,10 +33,6 @@ const booting = ref(false);
 const items = ref<PlatformTopup[]>([]);
 const total = ref(0);
 const page = ref(1);
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(total.value / PAGE_SIZE)),
-);
 
 function readToken(): string {
   try {
@@ -59,25 +55,25 @@ async function ensureToken(): Promise<string> {
   let token = readToken();
   if (token) return token;
   const login = await loginPlatform({
-    username: username.value.trim(),
-    password: password.value,
+    username: form.username.trim(),
+    password: form.password,
   });
   token = login.access_token;
   writeToken(token);
-  password.value = "";
+  form.password = "";
   return token;
 }
 
 async function loadPage(p: number, opts?: { allowTokenOnly?: boolean }) {
   if (loading.value) return;
-  if (!opts?.allowTokenOnly && !readToken() && (!username.value.trim() || !password.value)) {
+  if (!opts?.allowTokenOnly && !readToken() && (!form.username.trim() || !form.password)) {
     return;
   }
   error.value = "";
   loading.value = true;
   try {
     const token = await ensureToken();
-    password.value = "";
+    form.password = "";
     const data = await listPlatformTopups(token, p, PAGE_SIZE);
     items.value = data.items;
     total.value = data.total;
@@ -94,14 +90,14 @@ async function loadPage(p: number, opts?: { allowTokenOnly?: boolean }) {
       error.value = err.message || "拉取失败";
     }
     items.value = [];
-    password.value = "";
+    form.password = "";
   } finally {
     loading.value = false;
   }
 }
 
 async function onLogin() {
-  if (!username.value.trim() || !password.value || loading.value) return;
+  if (!form.username.trim() || !form.password || loading.value) return;
   await loadPage(1);
 }
 
@@ -134,7 +130,7 @@ watch(
       total.value = 0;
       page.value = 1;
       error.value = "";
-      password.value = "";
+      form.password = "";
       booting.value = false;
     }
   },
@@ -163,13 +159,13 @@ watch(
       <p class="top-pick__hint">
         登录 NewAPI 控制台拉取充值单（传统分页）；密码不保存。
       </p>
-      <a-form layout="vertical" @finish="onLogin">
+      <a-form layout="vertical" :model="form" @finish="onLogin">
         <a-form-item label="账号">
-          <a-input v-model:value="username" autocomplete="username" />
+          <a-input v-model:value="form.username" autocomplete="username" />
         </a-form-item>
         <a-form-item label="密码">
           <a-input-password
-            v-model:value="password"
+            v-model:value="form.password"
             autocomplete="current-password"
           />
         </a-form-item>
@@ -178,7 +174,7 @@ watch(
           html-type="submit"
           block
           :loading="loading"
-          :disabled="!username.trim() || !password"
+          :disabled="!form.username.trim() || !form.password"
         >
           登录并拉取
         </a-button>

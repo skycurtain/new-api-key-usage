@@ -2,7 +2,7 @@
 /**
  * 订阅选择弹层：登录（仅一次/标签页）+ 列表选用，与登记表单解耦
  */
-import { ref, watch } from "vue";
+import { reactive, ref, watch } from "vue";
 import {
   listPlatformSubscriptions,
   loginPlatform,
@@ -24,8 +24,8 @@ const emit = defineEmits<{
 
 const TOKEN_KEY = "naku_platform_token";
 
-const username = ref("");
-const password = ref("");
+/** 表单模型：antdv Form 只在提供 model 时才派发 finish（登录按钮经它触发） */
+const form = reactive({ username: "", password: "" });
 const error = ref("");
 const loading = ref(false);
 /** 打开后检查登录并拉取中——避免闪现登录表单 */
@@ -63,7 +63,7 @@ watch(
     } else {
       list.value = [];
       error.value = "";
-      password.value = "";
+      form.password = "";
       booting.value = false;
     }
   },
@@ -71,20 +71,20 @@ watch(
 
 async function load(skipLoginCheck = false) {
   if (loading.value) return;
-  if (!skipLoginCheck && (!username.value.trim() || !password.value)) return;
+  if (!skipLoginCheck && (!form.username.trim() || !form.password)) return;
   error.value = "";
   loading.value = true;
   try {
     let token = readToken();
     if (!token) {
       const login = await loginPlatform({
-        username: username.value.trim(),
-        password: password.value,
+        username: form.username.trim(),
+        password: form.password,
       });
       token = login.access_token;
       writeToken(token);
     }
-    password.value = "";
+    form.password = "";
     list.value = await listPlatformSubscriptions(token);
     if (list.value.length === 0) {
       error.value = "账号下没有订阅记录";
@@ -98,10 +98,15 @@ async function load(skipLoginCheck = false) {
       error.value = err.message || "拉取失败";
     }
     list.value = [];
-    password.value = "";
+    form.password = "";
   } finally {
     loading.value = false;
   }
+}
+
+/** 提交入口：点击「登录并拉取」/ 回车都走这里 */
+function onLogin() {
+  void load();
 }
 
 function isRegistered(s: PlatformSubscription): boolean {
@@ -134,19 +139,19 @@ function onUse(s: PlatformSubscription) {
       <p class="plat-pick__hint">
         使用 NewAPI 控制台账号登录后拉取订阅，仅用于预填登记；密码不保存。
       </p>
-      <a-form layout="vertical" @finish="load">
+      <a-form layout="vertical" :model="form" @finish="onLogin">
         <a-form-item label="账号">
           <a-input
-            v-model:value="username"
+            v-model:value="form.username"
             autocomplete="username"
-            @press-enter="load"
+            @press-enter="onLogin"
           />
         </a-form-item>
         <a-form-item label="密码">
           <a-input-password
-            v-model:value="password"
+            v-model:value="form.password"
             autocomplete="current-password"
-            @press-enter="load"
+            @press-enter="onLogin"
           />
         </a-form-item>
         <a-button
@@ -154,7 +159,7 @@ function onUse(s: PlatformSubscription) {
           html-type="submit"
           block
           :loading="loading"
-          :disabled="!username.trim() || !password"
+          :disabled="!form.username.trim() || !form.password"
         >
           登录并拉取
         </a-button>
